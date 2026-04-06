@@ -332,4 +332,18 @@ window.LYL_MAY = [
   { articulo: "Cilindro", medidas: "50cm", material: "Rotomoldeado", pintada: false, precio: 58700 },
   { articulo: "Misionera Texturada", medidas: "20cm", material: "Rotomoldeado", pintada: false, precio: 5800 },
   { articulo: "Misionera Texturada", medidas: "50cm", material: "Rotomoldeado", pintada: false, precio: 69600 },
+
+  // ROTOMOLDEADO — RAYUM Andina (actualizado)
+  { articulo: "ANDINA N27 RUSTICA", medidas: "", material: "Rotomoldeado", pintada: false, precio: 20100 },
+  { articulo: "ANDINA N40 RUSTICA", medidas: "", material: "Rotomoldeado", pintada: false, precio: 43800 },
+  { articulo: "ANDINA N50 RUSTICA", medidas: "", material: "Rotomoldeado", pintada: false, precio: 74800 },
+  { articulo: "ANDINA N65 RUSTICA", medidas: "", material: "Rotomoldeado", pintada: false, precio: 148300 },
+  { articulo: "ANDINA N80 RUSTICA", medidas: "", material: "Rotomoldeado", pintada: false, precio: 236600 },
+  { articulo: "ANDINA N40 LISO", medidas: "", material: "Rotomoldeado", pintada: false, precio: 38100 },
+  { articulo: "ANDINA N50 LISO", medidas: "", material: "Rotomoldeado", pintada: false, precio: 65000 },
+  { articulo: "ANDINA N65 LISO", medidas: "", material: "Rotomoldeado", pintada: false, precio: 128900 },
+  { articulo: "ANDINA N80 LISO", medidas: "", material: "Rotomoldeado", pintada: false, precio: 205700 },
+  { articulo: "JARDINERA 40x20x30", medidas: "40x20x30", material: "Rotomoldeado", pintada: false, precio: 35800 },
+  { articulo: "JARDINERA 60x20x30", medidas: "60x20x30", material: "Rotomoldeado", pintada: false, precio: 67100 },
+  { articulo: "JARDINERA 80x20x30", medidas: "80x20x30", material: "Rotomoldeado", pintada: false, precio: 93400 },
 ];
