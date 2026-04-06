@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LyL Macetas — Precios</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #f8f6f2; font-family: 'Helvetica Neue', Arial, sans-serif; }
+    input:focus, textarea:focus { outline: none; }
+    button, select { font-family: inherit; cursor: pointer; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #f0ede8; }
+    ::-webkit-scrollbar-thumb { background: #c8c4be; border-radius: 2px; }
+    .fade { animation: fadeIn .15s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// ─────────────────────────────────────────────
+// UTILIDADES DE CLASIFICACIÓN DE INSUMOS
+// ─────────────────────────────────────────────
+function clasificarInsumo(nombre) {
+  const n = nombre.toLowerCase();
+  // Sustratos (J- prefix o keywords claros)
+  const kwSust = ["j-","musgo bolsa","tierra abonada","resaca","pinocha","azalea sustrato",
+    "azalea ferticam","compost","perlita","turba","sustrato cactus","sustrato orquid",
+    "ferticam","vermiculita","j-verculita","turbamambo","compostero"];
+  for (const kw of kwSust) if (n.includes(kw)) return "Sustratos";
+  // Fertilizantes
+  const kwFert = ["fertiliz","abono","humus","guano","micorriz","trichoderm","polyamino",
+    "acrecio","fixa mzn","megagreen","bioalgas","sal hidrop","hormona polvo",
+    "hierro liq","melaza","acido humic","cesped recuper","ljf-","ljf ",
+    "fosfato","urea","triple 15","hidrocomp","jf ","jf-","vital fitorr",
+    "lecithin","amino x","savia anti","brillo foliar","lustre vegetal",
+    "d-humus","hortal brillo","turbamambo","turbambo","sal hidro"];
+  for (const kw of kwFert) if (n.includes(kw)) return "Fertilizantes";
+  // Insecticidas (catch-all para el resto de insumos)
+  return "Insecticidas";
+}
+
+// ─────────────────────────────────────────────
+// DATOS — se inyectan desde productosmin.js y productosmay.js
+// Por ahora incluidos inline. En producción: <script src="datos.js">
+// ─────────────────────────────────────────────
+
+// Este bloque será reemplazado por el archivo de datos externo.
+// Por brevedad, los datos se cargan de window.LYL_MIN y window.LYL_MAY
+// que el operador puede mantener como archivos separados.
+
+// ─────────────────────────────────────────────
+// CONSTANTES
+// ─────────────────────────────────────────────
+const WA = "5491157554899";
+const FECHA_MIN = "24-mar-2026";
+const FECHA_MAY = "26-mar-2026";
+const PASS_ADMIN = "lyl2024";
+const PASS_MAYOR = "lyl2024";
+
+const MODOS = {
+  minorista: { label: "Minorista", color: "#4a7c59", bg: "#f0f7f2", tag: "Verde", fecha: FECHA_MIN },
+  mayorista: { label: "Mayorista", color: "#2c5f7a", bg: "#eef4f8", tag: "Azul", fecha: FECHA_MAY },
+  clientes:  { label: "Lista Clientes", color: "#8b5e3c", bg: "#fdf5ef", tag: "Ámbar", fecha: FECHA_MIN },
+};
+
+const MAT_COLORS = {
+  Barro:"#b5651d","Barro Artesanal":"#8B4513",Fibrocemento:"#607d8b",
+  Rotomoldeado:"#2e7d32","Fibra de Vidrio":"#1565c0",Cerámica:"#ad1457",
+  Plástico:"#6a1f8a",Combo:"#c8860a",
+  Fertilizantes:"#388e3c",Insecticidas:"#b71c1c",Sustratos:"#795548",
+};
+
+const MATERIALES_MACETAS = ["Barro","Barro Artesanal","Fibrocemento","Rotomoldeado","Fibra de Vidrio","Cerámica","Plástico","Combo"];
+const MATERIALES_INSUMOS = ["Fertilizantes","Insecticidas","Sustratos"];
+const MATERIALES_TODOS  = [...MATERIALES_MACETAS,...MATERIALES_INSUMOS];
+
+const DESCUENTOS_MIN = [0, 10, 15];
+const DESCUENTOS_MAY = [0, 5, 10];
+
+const STORAGE_KEY_MAY = "lyl_presup_mayor_v3";
+const STORAGE_KEY_CLI = "lyl_presup_cli_v1";
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+const fmt = n => "$\u00a0" + Math.round(n).toLocaleString("es-AR");
+const pct = (base, d) => Math.round(base * (1 - d/100));
+const e = React.createElement;
+const { useState, useMemo, useCallback, useEffect } = React;
+
+const loadLS = (key) => { try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch { return null; } };
+const saveLS = (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} };
+const clearLS = (key) => { try { localStorage.removeItem(key); } catch {} };
+
+// Procesa catálogo raw → enriquece material de insumos con subcategoría
+function enriquecerProducto(p) {
+  if (p.material !== "Insumos") return p;
+  return { ...p, material: clasificarInsumo(p.articulo) };
+}
+
+// ─────────────────────────────────────────────
+// COMPONENTES BASE
+// ─────────────────────────────────────────────
+function Input({ value, onChange, placeholder, type="text", style={} }) {
+  return e('input', {
+    type, value, placeholder,
+    onChange: ev => onChange(ev.target.value),
+    style: { width:"100%", padding:"8px 11px", borderRadius:8, border:"1px solid #ddd",
+      background:"#fff", color:"#333", fontSize:13, fontFamily:"inherit", ...style }
+  });
+}
+
+function Pill({ label, active, color, onClick }) {
+  return e('button', {
+    onClick,
+    style: { padding:"3px 10px", borderRadius:12,
+      border:`1px solid ${active ? color : "#ddd"}`,
+      background: active ? color+"22" : "transparent",
+      color: active ? color : "#777", fontSize:11, fontWeight: active?"600":"400" }
+  }, label);
+}
+
+function Badge({ text, color }) {
+  return e('span', { style: { padding:"1px 7px", borderRadius:10, background:color+"22",
+    color, fontSize:10, border:`1px solid ${color}44`, display:"inline-block" } }, text);
+}
+
+// ─────────────────────────────────────────────
+// PANTALLA: SELECTOR DE MODO
+// ─────────────────────────────────────────────
+function PantallaSelector({ onSelect, onAdmin }) {
+  const [pinAdmin, setPinAdmin] = useState("");
+  const [errAdmin, setErrAdmin] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
+
+  const tryAdmin = () => {
+    if (pinAdmin === PASS_ADMIN) { setErrAdmin(false); onAdmin(); }
+    else { setErrAdmin(true); setPinAdmin(""); }
+  };
+
+  return e('div', { style:{ minHeight:"100vh", background:"#f8f6f2", display:"flex",
+      flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24 } },
+    e('img', { src:"https://www.lylmacetas.com.ar/wp-content/uploads/2022/02/logo-02.svg",
+      alt:"LyL Macetas", style:{ height:52, marginBottom:32 } }),
+
+    e('div', { style:{ width:"100%", maxWidth:380, display:"flex", flexDirection:"column", gap:12 } },
+      // Minorista
+      e('button', { onClick:()=>onSelect("minorista"), style:{
+        padding:"18px 20px", borderRadius:14, border:"2px solid #4a7c59",
+        background:"#fff", textAlign:"left", transition:"all .15s" } },
+        e('div', { style:{ fontSize:11, color:"#4a7c59", fontWeight:700, letterSpacing:1, marginBottom:4 } }, "🌿 LISTA MINORISTA"),
+        e('div', { style:{ fontSize:14, color:"#2c2c2c" } }, "Precios al público · consulta por WhatsApp")
+      ),
+      // Mayorista
+      e('button', { onClick:()=>onSelect("mayorista"), style:{
+        padding:"18px 20px", borderRadius:14, border:"2px solid #2c5f7a",
+        background:"#fff", textAlign:"left" } },
+        e('div', { style:{ fontSize:11, color:"#2c5f7a", fontWeight:700, letterSpacing:1, marginBottom:4 } }, "📦 LISTA MAYORISTA"),
+        e('div', { style:{ fontSize:14, color:"#2c2c2c" } }, "Presupuestador completo · arquitectos y paisajistas")
+      ),
+      // Lista Clientes
+      e('button', { onClick:()=>onSelect("clientes"), style:{
+        padding:"18px 20px", borderRadius:14, border:"2px solid #8b5e3c",
+        background:"#fff", textAlign:"left" } },
+        e('div', { style:{ fontSize:11, color:"#8b5e3c", fontWeight:700, letterSpacing:1, marginBottom:4 } }, "⭐ LISTA CLIENTES"),
+        e('div', { style:{ fontSize:14, color:"#2c2c2c" } }, "Precios personalizados con descuento fijo")
+      ),
+    ),
+
+    // Admin toggle
+    e('div', { style:{ marginTop:32, width:"100%", maxWidth:380 } },
+      !showAdmin
+        ? e('button', { onClick:()=>setShowAdmin(true), style:{ background:"transparent", border:"none",
+            color:"#aaa", fontSize:11, width:"100%", textAlign:"center" } }, "🔐 Acceso admin")
+        : e('div', { style:{ background:"#fff", borderRadius:12, padding:14, border:"1px solid #e8e4de" } },
+            e('div', { style:{ fontSize:12, color:"#555", marginBottom:8 } }, "Contraseña admin:"),
+            e('div', { style:{ display:"flex", gap:8 } },
+              e('input', { type:"password", placeholder:"Contraseña", value:pinAdmin,
+                onChange:ev=>setPinAdmin(ev.target.value),
+                onKeyDown:ev=>ev.key==="Enter"&&tryAdmin(),
+                style:{ flex:1, padding:"8px 11px", borderRadius:8, border:`1px solid ${errAdmin?"#c0392b":"#ddd"}`,
+                  fontSize:13, fontFamily:"inherit" } }),
+              e('button', { onClick:tryAdmin, style:{ padding:"8px 14px", borderRadius:8, border:"none",
+                background:"#333", color:"#fff", fontSize:13 } }, "Entrar")
+            ),
+            errAdmin && e('div', { style:{ color:"#c0392b", fontSize:11, marginTop:6 } }, "Contraseña incorrecta")
+          )
+    )
+  );
+}
+
+// ─────────────────────────────────────────────
+// HEADER COMPARTIDO
+// ─────────────────────────────────────────────
+function Header({ modo, color, fecha, itemCount, vistaActual, onCambiarVista, onVolver }) {
+  const showCartBtn = itemCount > 0 || (modo === "mayorista" || modo === "clientes");
+  return e('div', { style:{ background:"#fff", borderBottom:"2px solid #e8e4de",
+      padding:"12px 16px", display:"flex", justifyContent:"space-between",
+      alignItems:"center", position:"sticky", top:0, zIndex:100 } },
+    e('div', { style:{ display:"flex", alignItems:"center", gap:12 } },
+      e('button', { onClick:onVolver, style:{ background:"transparent", border:"none",
+          color:"#aaa", fontSize:18, lineHeight:1, padding:"0 4px" } }, "←"),
+      e('div', null,
+        e('div', { style:{ fontSize:12, fontWeight:700, color, letterSpacing:.5 } },
+          { minorista:"🌿 Minorista", mayorista:"📦 Mayorista", clientes:"⭐ Clientes", admin:"🔐 Admin" }[modo]
+        ),
+        e('div', { style:{ fontSize:10, color:"#aaa", marginTop:1 } }, fecha ? `Lista ${fecha}` : "Panel de administración")
+      )
+    ),
+    itemCount > 0 && e('button', {
+      onClick:()=>onCambiarVista(vistaActual==="catalogo"?"presupuesto":"catalogo"),
+      style:{ background:color, border:"none", borderRadius:20, padding:"6px 13px",
+        color:"#fff", fontSize:12, fontWeight:700 }
+    }, vistaActual==="catalogo" ? `🛒 ${itemCount} item${itemCount>1?"s":""}` : "← Catálogo")
+  );
+}
+
+// ─────────────────────────────────────────────
+// FILTROS DE BÚSQUEDA (compartido)
+// ─────────────────────────────────────────────
+function Filtros({ buscar, setBuscar, material, setMaterial, pintada, setPintada, color, modo }) {
+  const [seccion, setSeccion] = useState("macetas"); // macetas | insumos
+  const mats = seccion === "macetas" ? MATERIALES_MACETAS : MATERIALES_INSUMOS;
+
+  return e('div', { style:{ padding:"10px 14px 0" } },
+    e(Input, { value:buscar, onChange:setBuscar, placeholder:"🔍 Buscar por nombre o medida..." }),
+    // Sección tabs
+    e('div', { style:{ display:"flex", gap:8, margin:"8px 0 6px" } },
+      ["macetas","insumos"].map(s =>
+        e('button', { key:s, onClick:()=>{ setSeccion(s); setMaterial("Todos"); }, style:{
+          flex:1, padding:"5px", borderRadius:8, border:"none",
+          background: seccion===s ? color : "#e8e4de",
+          color: seccion===s ? "#fff" : "#777", fontSize:12, fontWeight:600 }
+        }, s==="macetas" ? "🪴 Macetas" : "🌱 Insumos")
+      )
+    ),
+    // Pills material
+    e('div', { style:{ display:"flex", gap:5, flexWrap:"wrap", marginBottom:6 } },
+      ["Todos",...mats].map(m =>
+        e(Pill, { key:m, label:m, active:material===m, color, onClick:()=>setMaterial(m) })
+      )
+    ),
+    // Pills pintada (solo macetas)
+    seccion === "macetas" && e('div', { style:{ display:"flex", gap:5, marginBottom:8 } },
+      ["Todos","Pintada","Sin pintar"].map(p =>
+        e(Pill, { key:p, label:p, active:pintada===p, color, onClick:()=>setPintada(p) })
+      )
+    ),
+    e('div', { style:{ height:4 } })
+  );
+}
+
+// ─────────────────────────────────────────────
+// CARD DE PRODUCTO (catálogo)
+// ─────────────────────────────────────────────
+function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false }) {
+  const color = MODOS[modo]?.color || "#333";
+  const dc = MAT_COLORS[grupo.material] || "#888";
+  const ps = (grupo.material==="Barro"||MATERIALES_INSUMOS.includes(grupo.material))
+    ? "" : grupo.pintada ? " · pintada" : " · sin pintar";
+
+  return e('div', { style:{ background:"#fff", borderRadius:10, marginBottom:8,
+      border:"1px solid #e8e4de", overflow:"hidden" } },
+    e('div', { style:{ padding:"9px 12px 7px", borderBottom:"1px solid #f0ede8" } },
+      e('div', { style:{ fontWeight:700, fontSize:13, color:"#2c2c2c" } }, grupo.articulo),
+      e('div', { style:{ display:"flex", gap:5, alignItems:"center", marginTop:2 } },
+        e('div', { style:{ width:6, height:6, borderRadius:"50%", background:dc } }),
+        e('span', { style:{ fontSize:10, color:"#999" } }, grupo.material + ps)
+      )
+    ),
+    grupo.variantes.map((v, vi) => {
+      const precioFinal = descPct > 0 ? pct(v.precio, descPct) : v.precio;
+      return e('div', { key:vi, style:{ padding:"8px 12px",
+          borderBottom: vi < grupo.variantes.length-1 ? "1px solid #f5f3ef" : "none",
+          display:"flex", justifyContent:"space-between", alignItems:"center" } },
+        e('div', null,
+          e('span', { style:{ fontSize:12, color:"#666" } }, v.medidas || "—"),
+          e('div', { style:{ display:"flex", gap:8, alignItems:"center", marginTop:2 } },
+            e('span', { style:{ fontSize:13, color, fontWeight:700 } }, fmt(precioFinal)),
+            descPct > 0 && e('span', { style:{ fontSize:10, color:"#aaa", textDecoration:"line-through" } }, fmt(v.precio)),
+            adminMode && v.costo && e('span', { style:{ fontSize:10, color:"#888",
+              background:"#f0f0f0", padding:"1px 5px", borderRadius:6, marginLeft:4 } },
+              `costo: ${fmt(v.costo)} · margen: ${Math.round((precioFinal/v.costo-1)*100)}%`
+            )
+          )
+        ),
+        e('button', {
+          onClick:()=>onAgregar(grupo, v, precioFinal),
+          style:{ padding:"5px 12px", borderRadius:8, border:`1px solid ${color}`,
+            background:"transparent", color, fontSize:12, fontWeight:600 }
+        }, "+ Agregar")
+      );
+    })
+  );
+}
+
+// ─────────────────────────────────────────────
+// MODO MINORISTA
+// ─────────────────────────────────────────────
+function ModoMinorista({ productos, onVolver, adminMode }) {
+  const color = MODOS.minorista.color;
+  const [buscar, setBuscar] = useState("");
+  const [material, setMaterial] = useState("Todos");
+  const [pintada, setPintada] = useState("Todos");
+  const [descPct, setDescPct] = useState(0);
+  const [carrito, setCarrito] = useState({});
+  const [nombre, setNombre] = useState("");
+  const [nota, setNota] = useState("");
+  const [direccion, setDireccion] = useState("");
+  const [vista, setVista] = useState("catalogo");
+  const [enviado, setEnviado] = useState(false);
+
+  const totalItems = Object.values(carrito).reduce((s,v)=>s+v.cantidad,0);
+
+  const grupos = useMemo(()=>{
+    const b = buscar.toLowerCase();
+    const mats = material==="Todos"
+      ? (b ? MATERIALES_TODOS : MATERIALES_TODOS)
+      : [material];
+    const filtrados = productos.filter(p=>{
+      const inMat = material==="Todos" || p.material===material;
+      const inBuscar = !b || p.articulo.toLowerCase().includes(b) || p.medidas.toLowerCase().includes(b);
+      const inPint = pintada==="Todos"||(pintada==="Pintada"&&p.pintada)||(pintada==="Sin pintar"&&!p.pintada);
+      return inMat && inBuscar && inPint;
+    });
+    const map={};
+    filtrados.forEach(p=>{
+      const k=`${p.articulo}||${p.material}||${p.pintada}`;
+      if(!map[k]) map[k]={...p,variantes:[]};
+      map[k].variantes.push({medidas:p.medidas,precio:p.precio});
+    });
+    return Object.values(map);
+  },[productos,buscar,material,pintada]);
+
+  const agregar=(grupo,v,precio)=>{
+    const key=`${grupo.articulo}||${v.medidas}||${grupo.material}||${grupo.pintada}`;
+    setCarrito(prev=>{
+      const ex=prev[key];
+      return {...prev,[key]:ex
+        ?{...ex,cantidad:ex.cantidad+1}
+        :{articulo:grupo.articulo,medidas:v.medidas,material:grupo.material,
+          pintada:grupo.pintada,precio,cantidad:1}};
+    });
+  };
+
+  const cambiarCant=(key,delta)=>setCarrito(prev=>{
+    const it=prev[key]; if(!it) return prev;
+    const n=it.cantidad+delta;
+    if(n<=0){const{[key]:_,...r}=prev;return r;}
+    return{...prev,[key]:{...it,cantidad:n}};
+  });
+
+  const totalPrecio=Object.values(carrito).reduce((s,v)=>s+v.precio*v.cantidad,0);
+
+  const enviar=()=>{
+    if(!nombre.trim()){alert("Ingresá tu nombre antes de enviar.");return;}
+    if(!Object.keys(carrito).length){alert("Seleccioná al menos un producto.");return;}
+    const items=Object.values(carrito);
+    const fecha=new Date().toLocaleDateString("es-AR");
+    let txt=`🌿 *Consulta de productos — LyL Macetas*\n`;
+    txt+=`👤 *${nombre.trim()}*\n📅 ${fecha}\n\n*Productos de interés:*\n`;
+    items.forEach(i=>{ txt+=`  • ${i.articulo}${i.medidas?" "+i.medidas:""} — ${i.cantidad} u.\n`; });
+    if(descPct>0) txt+=`\n🏷 Descuento solicitado: ${descPct}%\n`;
+    if(direccion.trim()) txt+=`\n📍 *Dirección:* ${direccion.trim()}\n`;
+    if(nota.trim()) txt+=`\n📝 *Nota:* ${nota.trim()}\n`;
+    txt+=`\n_Consulta enviada desde lylmacetas.com.ar_`;
+    window.open(`https://wa.me/${WA}?text=${encodeURIComponent(txt)}`,"_blank");
+    setEnviado(true);
+  };
+
+  return e('div', { style:{ maxWidth:480, margin:"0 auto", minHeight:"100vh", background:"#f8f6f2" } },
+    e(Header, { modo:"minorista", color, fecha:FECHA_MIN, itemCount:totalItems,
+      vistaActual:vista, onCambiarVista:setVista, onVolver }),
+
+    vista==="catalogo" && e('div', null,
+      // Banner descuento
+      e('div', { style:{ padding:"10px 14px 0" } },
+        e('div', { style:{ background:"#fff", borderRadius:10, padding:"10px 12px",
+            border:"1px solid #e8e4de", marginBottom:0 } },
+          e('div', { style:{ fontSize:11, color:"#777", marginBottom:6 } }, "Descuento especial:"),
+          e('div', { style:{ display:"flex", gap:6 } },
+            DESCUENTOS_MIN.map(d =>
+              e('button', { key:d, onClick:()=>setDescPct(d), style:{
+                flex:1, padding:"6px", borderRadius:8,
+                border:`1px solid ${descPct===d ? color : "#ddd"}`,
+                background: descPct===d ? color : "#fff",
+                color: descPct===d ? "#fff" : "#777", fontSize:12, fontWeight:600 }
+              }, d===0?"Sin desc.":`-${d}%`)
+            )
+          )
+        )
+      ),
+      e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo:"minorista"}),
+      e('div', { style:{ padding:"0 14px 80px" } },
+        grupos.length===0
+          ? e('div',{style:{textAlign:"center",color:"#aaa",padding:40}},"Sin resultados")
+          : grupos.map((g,i)=>e(ProductoCard,{key:i,grupo:g,onAgregar:agregar,descPct,modo:"minorista",adminMode}))
+      )
+    ),
+
+    vista==="presupuesto" && e('div', { style:{ padding:"12px 14px 80px", maxWidth:480, margin:"0 auto" } },
+      enviado
+        ? e('div',{style:{textAlign:"center",padding:40}},
+            e('div',{style:{fontSize:48,marginBottom:16}},"✅"),
+            e('div',{style:{fontSize:18,fontWeight:700,color,marginBottom:8}},"¡Consulta enviada!"),
+            e('div',{style:{fontSize:13,color:"#666",marginBottom:24}},"Te respondemos a la brevedad."),
+            e('button',{onClick:()=>{setCarrito({});setNombre("");setDireccion("");setNota("");setEnviado(false);setVista("catalogo");},
+              style:{padding:"12px 24px",borderRadius:10,border:"none",background:color,color:"#fff",fontSize:14}},
+              "Nueva consulta")
+          )
+        : e('div',null,
+            e('div',{style:{background:"#fff",borderRadius:10,padding:14,border:"1px solid #e8e4de",marginBottom:10}},
+              e(Input,{value:nombre,onChange:setNombre,placeholder:"Tu nombre *",style:{marginBottom:8}}),
+              e(Input,{value:direccion,onChange:setDireccion,placeholder:"Dirección de entrega (opcional)",style:{marginBottom:8}}),
+              e(Input,{value:nota,onChange:setNota,placeholder:"Nota o consulta adicional (opcional)"})
+            ),
+            Object.values(carrito).map((item,i)=>{
+              const key=`${item.articulo}||${item.medidas}||${item.material}||${item.pintada}`;
+              return e('div',{key:i,style:{background:"#fff",borderRadius:10,padding:"10px 12px",
+                  marginBottom:6,border:"1px solid #e8e4de",display:"flex",justifyContent:"space-between",alignItems:"center"}},
+                e('div',null,
+                  e('div',{style:{fontSize:13,fontWeight:700,color:"#2c2c2c"}},item.articulo+(item.medidas?" "+item.medidas:"")),
+                  e('div',{style:{fontSize:11,color:"#888",marginTop:2}},item.material+" · "+fmt(item.precio)+" c/u")
+                ),
+                e('div',{style:{display:"flex",alignItems:"center",gap:8}},
+                  e('button',{onClick:()=>cambiarCant(key,-1),style:{width:26,height:26,borderRadius:"50%",border:`1px solid #ddd`,background:"transparent",color:"#666",fontSize:16}},"−"),
+                  e('span',{style:{fontSize:14,fontWeight:700,minWidth:20,textAlign:"center"}},item.cantidad),
+                  e('button',{onClick:()=>cambiarCant(key,1),style:{width:26,height:26,borderRadius:"50%",border:"none",background:color,color:"#fff",fontSize:16}},"+")
+                )
+              );
+            }),
+            e('div',{style:{background:"#f0f7f2",borderRadius:10,padding:"12px 14px",marginTop:8,border:"1px solid #c8e6c9"}},
+              e('div',{style:{display:"flex",justifyContent:"space-between",fontSize:14,fontWeight:700,color:"#2d5a3d"}},
+                e('span',null,`${totalItems} productos · referencia`),e('span',null,fmt(totalPrecio))
+              ),
+              e('div',{style:{fontSize:10,color:"#888",marginTop:4}},"* El presupuesto final puede incluir descuentos y envío.")
+            ),
+            e('button',{onClick:enviar,style:{width:"100%",padding:14,borderRadius:10,border:"none",background:"#25D366",color:"#fff",fontSize:14,fontWeight:700,marginTop:12}},"📲 Enviar consulta por WhatsApp")
+          )
+    )
+  );
+}
+
+// ─────────────────────────────────────────────
+// PRESUPUESTADOR COMPARTIDO (Mayorista + Clientes)
+// ─────────────────────────────────────────────
+function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode }) {
+  const cfg = MODOS[modo];
+  const color = cfg.color;
+  const descOpciones = modo==="mayorista" ? DESCUENTOS_MAY : [0,5,10,15,20];
+  const storageKey = modo==="mayorista" ? STORAGE_KEY_MAY : STORAGE_KEY_CLI;
+
+  const b = loadLS(storageKey) || {};
+  const [vista, setVista] = useState("catalogo");
+  const [buscar, setBuscar] = useState("");
+  const [material, setMaterial] = useState("Todos");
+  const [pintada, setPintada] = useState("Todos");
+  const [presupuesto, setPresupuesto] = useState(b.presupuesto||[]);
+  const [cliente, setCliente] = useState(b.cliente||"");
+  const [proyecto, setProyecto] = useState(b.proyecto||"");
+  const [envio, setEnvio] = useState(b.envio||"");
+  const [descuento, setDescuento] = useState(b.descuento ?? (descFijo!==null?descFijo:0));
+  const [mostrarAnticipo, setMostrarAnticipo] = useState(b.mostrarAnticipo??true);
+  const [textoVis, setTextoVis] = useState(null);
+  const [notaAb, setNotaAb] = useState(null);
+  const [notaTemp, setNotaTemp] = useState("");
+  const [modalMan, setModalMan] = useState(false);
+  const [formMan, setFormMan] = useState({articulo:"",medidas:"",precio:"",nota:"",material:"Otros"});
+  const [numPresup, setNumPresup] = useState(b.numPresup||"");
+  const [confirmarVaciar, setConfirmarVaciar] = useState(false);
+
+  const save = useCallback((extra={})=>{
+    saveLS(storageKey,{presupuesto,cliente,proyecto,envio,descuento,mostrarAnticipo,numPresup,...extra});
+  },[presupuesto,cliente,proyecto,envio,descuento,mostrarAnticipo,numPresup,storageKey]);
+
+  const asignarNum=()=>{
+    if(numPresup) return;
+    const n=parseInt(localStorage.getItem(`lyl_num_${modo}`)||"0",10)+1;
+    localStorage.setItem(`lyl_num_${modo}`,String(n));
+    const num=`${modo==="mayorista"?"PM":"PC"}-${String(n).padStart(3,"0")}`;
+    setNumPresup(num); save({numPresup:num});
+  };
+
+  const agregar=(grupo,v,precio)=>{
+    asignarNum();
+    const key=`${grupo.articulo}||${v.medidas}||${grupo.material}||${grupo.pintada}||${Date.now()}`;
+    setPresupuesto(prev=>{
+      const ex=prev.find(i=>i.articulo===grupo.articulo&&i.medidas===v.medidas&&i.material===grupo.material&&i.pintada===grupo.pintada);
+      const nuevo=ex
+        ?prev.map(i=>i.key===ex.key?{...i,cantidad:i.cantidad+1}:i)
+        :[...prev,{articulo:grupo.articulo,medidas:v.medidas,material:grupo.material,
+            pintada:grupo.pintada,precio,key,cantidad:1,nota:"",sinDesc:false}];
+      saveLS(storageKey,{presupuesto:nuevo,cliente,proyecto,envio,descuento,mostrarAnticipo,numPresup});
+      return nuevo;
+    });
+    setVista("presupuesto");
+  };
+
+  const grupos = useMemo(()=>{
+    const b2=buscar.toLowerCase();
+    const filtrados=productos.filter(p=>{
+      const inMat=material==="Todos"||p.material===material;
+      const inB=!b2||p.articulo.toLowerCase().includes(b2)||p.medidas.toLowerCase().includes(b2);
+      const inP=pintada==="Todos"||(pintada==="Pintada"&&p.pintada)||(pintada==="Sin pintar"&&!p.pintada);
+      return inMat&&inB&&inP;
+    });
+    const map={};
+    filtrados.forEach(p=>{
+      const k=`${p.articulo}||${p.material}||${p.pintada}`;
+      if(!map[k]) map[k]={...p,variantes:[]};
+      map[k].variantes.push({medidas:p.medidas,precio:p.precio});
+    });
+    return Object.values(map);
+  },[productos,buscar,material,pintada]);
+
+  const envioNum=parseFloat(String(envio).replace(/[^\d.]/g,""))||0;
+  const descPct=parseFloat(String(descuento))||0;
+  const subtotal=presupuesto.reduce((s,i)=>s+i.precio*i.cantidad,0);
+  const baseDesc=presupuesto.filter(i=>!i.sinDesc).reduce((s,i)=>s+i.precio*i.cantidad,0);
+  const montoDesc=Math.round(baseDesc*descPct/100);
+  const subtotalDesc=subtotal-montoDesc;
+  const totalFinal=subtotalDesc+envioNum;
+  const anticipo80=Math.round(totalFinal*.8);
+  const saldo20=totalFinal-anticipo80;
+
+  const generarTexto=()=>{
+    let t=`🌿 *LyL Macetas* — Presupuesto ${numPresup||""}\n`;
+    if(cliente) t+=`Cliente: ${cliente}\n`;
+    if(proyecto) t+=`Proyecto: ${proyecto}\n`;
+    t+=`Fecha: ${new Date().toLocaleDateString("es-AR")}\n\n`;
+    presupuesto.forEach(i=>{
+      t+=`  • ${i.articulo}${i.medidas?" "+i.medidas:""} — ${i.cantidad} u. × ${fmt(i.precio)} = ${fmt(i.precio*i.cantidad)}`;
+      if(i.nota) t+=`\n    _${i.nota}_`;
+      t+="\n";
+    });
+    t+=`\n*Subtotal: ${fmt(subtotal)}*`;
+    if(descPct>0) t+=`\n🏷 Descuento ${descPct}%: -${fmt(montoDesc)}`;
+    if(envioNum>0) t+=`\n🚚 Envío: ${fmt(envioNum)}`;
+    t+=`\n\n*TOTAL: ${fmt(totalFinal)}*`;
+    if(mostrarAnticipo) t+=`\n\n_Anticipo 80%: ${fmt(anticipo80)}_\n_Saldo: ${fmt(saldo20)}_`;
+    return t;
+  };
+
+  const generarJson=()=>JSON.stringify({
+    numero:numPresup,cliente,proyecto,
+    fecha:new Date().toLocaleDateString("es-AR"),
+    items:presupuesto.map(i=>({articulo:i.articulo,medidas:i.medidas,material:i.material,
+      cantidad:i.cantidad,precio:i.precio,total:i.precio*i.cantidad,nota:i.nota,sin_descuento:i.sinDesc||false})),
+    subtotal,descuento_pct:descPct,descuento_monto:montoDesc,envio:envioNum,total:totalFinal,
+    anticipo_80:mostrarAnticipo?anticipo80:null,saldo:mostrarAnticipo?saldo20:null
+  },null,2);
+
+  const exportar=()=>{
+    const nombre=[numPresup,cliente].filter(Boolean).join("_").replace(/\s+/g,"_")||"borrador";
+    const blob=new Blob([JSON.stringify({presupuesto,cliente,proyecto,envio,descuento,numPresup,mostrarAnticipo},null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");a.href=url;a.download=`LyL_${nombre}.json`;a.click();URL.revokeObjectURL(url);
+  };
+
+  const importar=(ev)=>{
+    const file=ev.target.files?.[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=e2=>{
+      try{
+        const d=JSON.parse(e2.target.result);
+        if(!d.presupuesto){alert("Archivo no válido.");return;}
+        setPresupuesto(d.presupuesto||[]);setCliente(d.cliente||"");setProyecto(d.proyecto||"");
+        setEnvio(d.envio||"");setDescuento(d.descuento??0);setNumPresup(d.numPresup||"");
+        setMostrarAnticipo(d.mostrarAnticipo??true);saveLS(storageKey,d);setVista("presupuesto");
+      }catch{alert("Error al leer el archivo.");}
+    };
+    reader.readAsText(file);ev.target.value="";
+  };
+
+  const vaciar=()=>{
+    setPresupuesto([]);setCliente("");setProyecto("");setEnvio("");
+    setDescuento(descFijo!==null?descFijo:0);setNumPresup("");setTextoVis(null);
+    clearLS(storageKey);setConfirmarVaciar(false);
+  };
+
+  const guardarNota=(key)=>{
+    setPresupuesto(prev=>prev.map(i=>i.key===key?{...i,nota:notaTemp}:i));
+    setNotaAb(null);
+  };
+
+  const guardarManual=()=>{
+    const pr=parseFloat(String(formMan.precio).replace(/[^\d.]/g,""))||0;
+    if(!formMan.articulo.trim()||!pr) return;
+    const key=`manual||${Date.now()}`;
+    setPresupuesto(prev=>[...prev,{articulo:formMan.articulo.trim(),medidas:formMan.medidas.trim(),
+      material:formMan.material||"Manual",pintada:false,precio:pr,key,cantidad:1,nota:formMan.nota.trim(),sinDesc:false}]);
+    setModalMan(false);
+  };
+
+  const n = presupuesto.length;
+
+  // CATALOGO VIEW
+  const catalogo = e('div', null,
+    e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo}),
+    e('div', { style:{ padding:"0 14px 80px" } },
+      grupos.length===0
+        ?e('div',{style:{textAlign:"center",color:"#aaa",padding:40}},"Sin resultados")
+        :grupos.map((g,i)=>e(ProductoCard,{key:i,grupo:g,onAgregar:agregar,descPct:0,modo,adminMode}))
+    )
+  );
+
+  // PRESUPUESTO VIEW
+  const presupVista = e('div', { style:{ padding:"12px 14px 80px" } },
+    // Header
+    e('div', { style:{ background:"#fff", borderRadius:10, padding:12, border:"1px solid #e8e4de", marginBottom:10 } },
+      e('div', { style:{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 } },
+        e('span', { style:{ fontSize:12, color, fontWeight:700 } }, numPresup||"Nº pendiente"),
+        e('button', { onClick:()=>setModalMan(true), style:{ padding:"4px 10px", borderRadius:7,
+            border:`1px solid ${color}`, background:"transparent", color, fontSize:11 } }, "+ Manual")
+      ),
+      e(Input,{value:cliente,onChange:v=>{setCliente(v);save({cliente:v});},placeholder:"Cliente",style:{marginBottom:6}}),
+      e(Input,{value:proyecto,onChange:v=>{setProyecto(v);save({proyecto:v});},placeholder:"Proyecto / Dirección"})
+    ),
+
+    // Items
+    n===0
+      ?e('div',{style:{textAlign:"center",color:"#aaa",padding:30,fontSize:13}},"El presupuesto está vacío.\nBuscá productos en 🔍 Catálogo")
+      :presupuesto.map(item=>
+        e('div',{key:item.key,style:{background:"#fff",borderRadius:10,padding:"10px 12px",marginBottom:6,border:"1px solid #e8e4de"}},
+          e('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}},
+            e('div',{style:{flex:1}},
+              e('div',{style:{fontSize:13,fontWeight:700,color:"#2c2c2c"}},item.articulo+(item.medidas?" "+item.medidas:"")),
+              e('div',{style:{display:"flex",gap:6,marginTop:3,flexWrap:"wrap",alignItems:"center"}},
+                e(Badge,{text:item.material,color:MAT_COLORS[item.material]||"#888"}),
+                e('span',{style:{fontSize:11,color}},fmt(item.precio)+" c/u"),
+                e('label',{style:{display:"flex",alignItems:"center",gap:4,fontSize:10,color:item.sinDesc?"#e07b39":"#aaa",cursor:"pointer"}},
+                  e('input',{type:"checkbox",checked:item.sinDesc||false,
+                    onChange:()=>setPresupuesto(prev=>prev.map(i=>i.key===item.key?{...i,sinDesc:!i.sinDesc}:i)),
+                    style:{accentColor:"#e07b39"}}),
+                  "sin desc."
+                )
+              )
+            ),
+            e('button',{onClick:()=>setPresupuesto(prev=>prev.filter(i=>i.key!==item.key)),
+              style:{background:"transparent",border:"none",color:"#ccc",fontSize:18,padding:"0 4px"}},"×")
+          ),
+          e('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:4}},
+            e('div',{style:{display:"flex",alignItems:"center",gap:8}},
+              e('button',{onClick:()=>setPresupuesto(prev=>prev.map(i=>i.key===item.key?{...i,cantidad:Math.max(1,i.cantidad-1)}:i)),
+                style:{width:24,height:24,borderRadius:"50%",border:`1px solid ${color}`,background:"transparent",color,fontSize:16}},"−"),
+              e('span',{style:{fontSize:14,fontWeight:700,color:"#333",minWidth:20,textAlign:"center"}},item.cantidad),
+              e('button',{onClick:()=>setPresupuesto(prev=>prev.map(i=>i.key===item.key?{...i,cantidad:i.cantidad+1}:i)),
+                style:{width:24,height:24,borderRadius:"50%",border:`1px solid ${color}`,background:"transparent",color,fontSize:16}},"+")
+            ),
+            e('span',{style:{fontSize:14,fontWeight:700,color}},fmt(item.precio*item.cantidad))
+          ),
+          notaAb===item.key
+            ?e('div',{style:{marginTop:8}},
+                e(Input,{value:notaTemp,onChange:setNotaTemp,placeholder:"Nota...",style:{fontSize:12}}),
+                e('div',{style:{display:"flex",gap:6,marginTop:4}},
+                  e('button',{onClick:()=>guardarNota(item.key),style:{flex:1,padding:5,borderRadius:6,border:"none",background:color,color:"#fff",fontSize:11}},"✓ Guardar"),
+                  e('button',{onClick:()=>setNotaAb(null),style:{padding:"5px 10px",borderRadius:6,border:"1px solid #ddd",background:"transparent",color:"#666",fontSize:11}},"×")
+                )
+              )
+            :e('button',{onClick:()=>{setNotaAb(item.key);setNotaTemp(item.nota||"");},
+                style:{marginTop:5,background:"transparent",border:"none",color:item.nota?color:"#ccc",cursor:"pointer",fontSize:10,padding:0}},
+                item.nota?`📝 ${item.nota}`:"+nota")
+        )
+      ),
+
+    // Totales
+    n>0 && e('div',{style:{background:"#fff",borderRadius:10,padding:12,marginTop:4,border:"1px solid #e8e4de"}},
+      // Descuento pills
+      e('div',{style:{marginBottom:10}},
+        e('div',{style:{fontSize:11,color:"#777",marginBottom:6}},"Descuento:"),
+        e('div',{style:{display:"flex",gap:6}},
+          descOpciones.map(d=>
+            e('button',{key:d,onClick:()=>{setDescuento(d);save({descuento:d});},style:{
+              flex:1,padding:"5px",borderRadius:8,
+              border:`1px solid ${descuento===d?color:"#ddd"}`,
+              background:descuento===d?color:"#fff",
+              color:descuento===d?"#fff":"#777",fontSize:12,fontWeight:600
+            }},d===0?"0%":`-${d}%`)
+          )
+        )
+      ),
+      e('div',{style:{display:"flex",gap:8,marginBottom:10}},
+        e(Input,{value:envio,onChange:v=>{setEnvio(v);save({envio:v});},placeholder:"Envío $",type:"number",style:{flex:1}}),
+      ),
+      e('div',{style:{display:"flex",justifyContent:"space-between",fontSize:13,color:"#888",marginBottom:3}},e('span',null,"Subtotal"),e('span',null,fmt(subtotal))),
+      descPct>0&&e('div',{style:{display:"flex",justifyContent:"space-between",fontSize:13,color:"#e07b39",marginBottom:3}},e('span',null,`Descuento ${descPct}%`),e('span',null,`-${fmt(montoDesc)}`)),
+      envioNum>0&&e('div',{style:{display:"flex",justifyContent:"space-between",fontSize:13,color:"#888",marginBottom:3}},e('span',null,"Envío"),e('span',null,fmt(envioNum))),
+      e('div',{style:{display:"flex",justifyContent:"space-between",fontSize:17,fontWeight:700,color,borderTop:"1px solid #f0ede8",paddingTop:8,marginTop:4}},e('span',null,"TOTAL"),e('span',null,fmt(totalFinal))),
+      e('label',{style:{display:"flex",alignItems:"center",gap:6,marginTop:8,fontSize:11,color:"#777",cursor:"pointer"}},
+        e('input',{type:"checkbox",checked:mostrarAnticipo,onChange:()=>setMostrarAnticipo(v=>!v)}),
+        "Mostrar anticipo 80/20"
+      ),
+      mostrarAnticipo&&e('div',{style:{marginTop:4}},
+        e('div',{style:{display:"flex",justifyContent:"space-between",fontSize:11,color:"#555",marginTop:2}},e('span',null,"Anticipo 80%"),e('span',null,fmt(anticipo80))),
+        e('div',{style:{display:"flex",justifyContent:"space-between",fontSize:11,color:"#888"}},e('span',null,"Saldo"),e('span',null,fmt(saldo20)))
+      )
+    ),
+
+    // Acciones
+    n>0&&e('div',{style:{display:"flex",flexDirection:"column",gap:8,marginTop:10}},
+      e('button',{onClick:()=>window.open(`https://wa.me/${WA}?text=${encodeURIComponent(generarTexto())}`,"_blank"),
+        style:{width:"100%",padding:13,borderRadius:10,border:"none",background:"#25D366",color:"#fff",fontSize:14,fontWeight:700}},
+        "📲 Enviar por WhatsApp"),
+      e('button',{onClick:()=>setTextoVis(textoVis?.id==="texto"?null:{id:"texto",txt:generarTexto()}),
+        style:{width:"100%",padding:10,borderRadius:10,border:"1px solid #ddd",background:"transparent",color:"#888",fontSize:12}},
+        "📋 Ver texto"),
+      textoVis?.id==="texto"&&e('textarea',{readOnly:true,value:textoVis.txt,onFocus:ev=>ev.target.select(),
+        rows:Math.min(textoVis.txt.split("\n").length+1,16),
+        style:{width:"100%",padding:10,borderRadius:8,border:`1px solid ${color}`,background:"#f5f3ef",fontFamily:"monospace",fontSize:11,lineHeight:1.5,resize:"vertical"}}),
+      e('button',{onClick:()=>setTextoVis(textoVis?.id==="json"?null:{id:"json",txt:generarJson()}),
+        style:{width:"100%",padding:11,borderRadius:10,border:`1px solid ${color}`,background:"transparent",color,fontSize:13,fontWeight:700}},
+        "📄 JSON → Claude (PDF/Remito)"),
+      textoVis?.id==="json"&&e('textarea',{readOnly:true,value:textoVis.txt,onFocus:ev=>ev.target.select(),
+        rows:8,style:{width:"100%",padding:10,borderRadius:8,border:`1px solid ${color}`,background:"#f0f5f7",fontFamily:"monospace",fontSize:11,lineHeight:1.4,resize:"vertical"}}),
+      e('button',{onClick:()=>setConfirmarVaciar(true),
+        style:{width:"100%",padding:9,borderRadius:10,border:"1px solid #ddd",background:"transparent",color:"#bbb",fontSize:11}},
+        "🗑 Vaciar presupuesto"),
+      e('div',{style:{display:"flex",gap:8,borderTop:"1px solid #e8e4de",paddingTop:8}},
+        e('button',{onClick:exportar,style:{flex:1,padding:9,borderRadius:8,border:`1px solid ${color}`,background:"transparent",color,fontSize:12,fontWeight:700}},"💾 Guardar borrador"),
+        e('label',{style:{flex:1,padding:9,borderRadius:8,border:"1px solid #ddd",background:"transparent",color:"#888",fontSize:12,textAlign:"center",display:"block"}},
+          "📂 Cargar borrador",
+          e('input',{type:"file",accept:".json",onChange:importar,style:{display:"none"}})
+        )
+      )
+    )
+  );
+
+  // MODALES
+  const modalManual = modalMan && e('div',{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}},
+    e('div',{style:{background:"#fff",borderRadius:14,padding:20,width:"100%",maxWidth:360}},
+      e('div',{style:{fontSize:15,fontWeight:700,color,marginBottom:14}},"Artículo manual"),
+      e(Input,{value:formMan.articulo,onChange:v=>setFormMan(f=>({...f,articulo:v})),placeholder:"Artículo *",style:{marginBottom:8}}),
+      e(Input,{value:formMan.medidas,onChange:v=>setFormMan(f=>({...f,medidas:v})),placeholder:"Medidas",style:{marginBottom:8}}),
+      e(Input,{value:formMan.precio,onChange:v=>setFormMan(f=>({...f,precio:v})),placeholder:"Precio *",type:"number",style:{marginBottom:8}}),
+      e(Input,{value:formMan.nota,onChange:v=>setFormMan(f=>({...f,nota:v})),placeholder:"Nota",style:{marginBottom:12}}),
+      e('div',{style:{display:"flex",gap:8}},
+        e('button',{onClick:()=>setModalMan(false),style:{flex:1,padding:11,borderRadius:8,border:"1px solid #ddd",background:"transparent",color:"#666",fontSize:13}},"Cancelar"),
+        e('button',{onClick:guardarManual,style:{flex:1,padding:11,borderRadius:8,border:"none",background:color,color:"#fff",fontSize:13,fontWeight:700}},"Agregar")
+      )
+    )
+  );
+
+  const modalConfirmar = confirmarVaciar && e('div',{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}},
+    e('div',{style:{background:"#fff",borderRadius:14,padding:20,width:"100%",maxWidth:320,textAlign:"center"}},
+      e('div',{style:{fontSize:32,marginBottom:10}},"🗑"),
+      e('div',{style:{fontSize:15,color:"#555",marginBottom:16}},"¿Vaciar el presupuesto?"),
+      e('div',{style:{display:"flex",gap:8}},
+        e('button',{onClick:()=>setConfirmarVaciar(false),style:{flex:1,padding:11,borderRadius:8,border:"1px solid #ddd",background:"transparent",color:"#666",fontSize:13}},"Cancelar"),
+        e('button',{onClick:vaciar,style:{flex:1,padding:11,borderRadius:8,border:"none",background:"#c0392b",color:"#fff",fontSize:13,fontWeight:700}},"Vaciar")
+      )
+    )
+  );
+
+  return e('div',{style:{maxWidth:480,margin:"0 auto",minHeight:"100vh",background:"#f8f6f2"}},
+    e(Header,{modo,color,fecha:cfg.fecha,itemCount:n,vistaActual:vista,onCambiarVista:setVista,onVolver}),
+    e('div',{style:{display:"flex",borderBottom:"1px solid #e8e4de",background:"#f0ede8"}},
+      [["catalogo","🔍 Catálogo"],["presupuesto","🧾 Presupuesto"]].map(([k,label])=>
+        e('button',{key:k,onClick:()=>setVista(k),style:{
+          flex:1,padding:"10px 6px",border:"none",background:"transparent",
+          color:vista===k?color:"#666",borderBottom:vista===k?`2px solid ${color}`:"2px solid transparent",
+          fontSize:13,cursor:"pointer",fontWeight:vista===k?"700":"400",position:"relative"
+        }},label,k==="presupuesto"&&n>0&&e('span',{style:{marginLeft:5,background:color,color:"#fff",borderRadius:10,padding:"1px 6px",fontSize:10}},n))
+      )
+    ),
+    vista==="catalogo"?catalogo:presupVista,
+    modalManual,
+    modalConfirmar
+  );
+}
+
+// ─────────────────────────────────────────────
+// PANEL ADMIN
+// ─────────────────────────────────────────────
+function PanelAdmin({ productos, onVolver }) {
+  const [buscar, setBuscar] = useState("");
+  const [material, setMaterial] = useState("Todos");
+  const [editando, setEditando] = useState(null);
+  const [costos, setCostos] = useState(()=>{ const r=loadLS("lyl_costos_v1"); return r||{}; });
+
+  const saveCostos=(c)=>{ setCostos(c); saveLS("lyl_costos_v1",c); };
+
+  const grupos = useMemo(()=>{
+    const b=buscar.toLowerCase();
+    const filtrados=productos.filter(p=>{
+      const inM=material==="Todos"||p.material===material;
+      const inB=!b||p.articulo.toLowerCase().includes(b)||p.medidas.toLowerCase().includes(b);
+      return inM&&inB;
+    });
+    const map={};
+    filtrados.forEach(p=>{
+      const k=`${p.articulo}||${p.material}`;
+      if(!map[k]) map[k]={...p,variantes:[]};
+      map[k].variantes.push({medidas:p.medidas,precio_min:p.precio_min,precio_may:p.precio_may});
+    });
+    return Object.values(map);
+  },[productos,buscar,material]);
+
+  return e('div',{style:{maxWidth:480,margin:"0 auto",minHeight:"100vh",background:"#f8f6f2"}},
+    e(Header,{modo:"admin",color:"#333",fecha:null,itemCount:0,vistaActual:"catalogo",onCambiarVista:()=>{},onVolver}),
+    e('div',{style:{padding:"12px 14px"}},
+      e('div',{style:{background:"#fff3cd",borderRadius:10,padding:"10px 12px",marginBottom:12,border:"1px solid #ffc107"}},
+        e('div',{style:{fontSize:12,fontWeight:700,color:"#856404",marginBottom:3}},"🔐 Modo Admin"),
+        e('div',{style:{fontSize:11,color:"#856404"}},"Podés cargar costos para ver el margen de cada producto. Se guardan localmente en este dispositivo.")
+      ),
+      e(Input,{value:buscar,onChange:setBuscar,placeholder:"🔍 Buscar producto..."}),
+      e('div',{style:{display:"flex",gap:5,flexWrap:"wrap",margin:"8px 0 12px"}},
+        ["Todos",...MATERIALES_TODOS].map(m=>
+          e(Pill,{key:m,label:m,active:material===m,color:"#333",onClick:()=>setMaterial(m)})
+        )
+      ),
+      grupos.map((grupo,idx)=>{
+        const dc=MAT_COLORS[grupo.material]||"#888";
+        return e('div',{key:idx,style:{background:"#fff",borderRadius:10,marginBottom:8,border:"1px solid #e8e4de",overflow:"hidden"}},
+          e('div',{style:{padding:"9px 12px 7px",borderBottom:"1px solid #f0ede8",display:"flex",justifyContent:"space-between",alignItems:"center"}},
+            e('div',null,
+              e('div',{style:{fontWeight:700,fontSize:13,color:"#2c2c2c"}},grupo.articulo),
+              e('div',{style:{display:"flex",gap:5,alignItems:"center",marginTop:2}},
+                e('div',{style:{width:6,height:6,borderRadius:"50%",background:dc}}),
+                e('span',{style:{fontSize:10,color:"#999"}},grupo.material)
+              )
+            )
+          ),
+          grupo.variantes.map((v,vi)=>{
+            const costoKey=`${grupo.articulo}||${v.medidas}||${grupo.material}`;
+            const costo=costos[costoKey]||0;
+            const margenMin=costo>0?Math.round((v.precio_min/costo-1)*100):null;
+            const margenMay=costo>0?Math.round((v.precio_may/costo-1)*100):null;
+            return e('div',{key:vi,style:{padding:"8px 12px",borderBottom:vi<grupo.variantes.length-1?"1px solid #f5f3ef":"none"}},
+              e('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}},
+                e('span',{style:{fontSize:12,color:"#666"}},(v.medidas||"—")),
+                editando===costoKey
+                  ? e('div',{style:{display:"flex",gap:6,alignItems:"center"}},
+                      e('input',{type:"number",placeholder:"Costo $",
+                        defaultValue:costo||"",
+                        id:`inp_${costoKey.replace(/[^a-z0-9]/gi,"_")}`,
+                        style:{width:100,padding:"4px 7px",borderRadius:6,border:"1px solid #4a7c59",fontSize:12,fontFamily:"inherit"}}),
+                      e('button',{onClick:()=>{
+                          const val=parseFloat(document.getElementById(`inp_${costoKey.replace(/[^a-z0-9]/gi,"_")}`).value)||0;
+                          const nuevo={...costos,[costoKey]:val};saveCostos(nuevo);setEditando(null);
+                        },style:{padding:"4px 8px",borderRadius:6,border:"none",background:"#4a7c59",color:"#fff",fontSize:11}},"✓"),
+                      e('button',{onClick:()=>setEditando(null),style:{padding:"4px 8px",borderRadius:6,border:"1px solid #ddd",background:"transparent",color:"#888",fontSize:11}},"×")
+                    )
+                  : e('button',{onClick:()=>setEditando(costoKey),style:{padding:"3px 8px",borderRadius:6,border:"1px solid #ddd",background:"transparent",color:"#888",fontSize:10}},
+                      costo>0?`💰 ${fmt(costo)}`:"+ costo")
+              ),
+              e('div',{style:{display:"flex",gap:10}},
+                e('div',{style:{flex:1,background:"#f0f7f2",borderRadius:8,padding:"6px 8px"}},
+                  e('div',{style:{fontSize:10,color:"#4a7c59",fontWeight:700,marginBottom:2}},"MINORISTA"),
+                  e('div',{style:{fontSize:13,fontWeight:700,color:"#2d5a3d"}},fmt(v.precio_min)),
+                  margenMin!==null&&e('div',{style:{fontSize:10,color:margenMin>30?"#2e7d32":margenMin>15?"#e07b39":"#c0392b"}},`Margen: ${margenMin}%`)
+                ),
+                e('div',{style:{flex:1,background:"#eef4f8",borderRadius:8,padding:"6px 8px"}},
+                  e('div',{style:{fontSize:10,color:"#2c5f7a",fontWeight:700,marginBottom:2}},"MAYORISTA"),
+                  e('div',{style:{fontSize:13,fontWeight:700,color:"#1a3f52"}},fmt(v.precio_may)),
+                  margenMay!==null&&e('div',{style:{fontSize:10,color:margenMay>20?"#2e7d32":margenMay>10?"#e07b39":"#c0392b"}},`Margen: ${margenMay}%`)
+                )
+              )
+            );
+          })
+        );
+      })
+    )
+  );
+}
+
+// ─────────────────────────────────────────────
+// APP PRINCIPAL
+// ─────────────────────────────────────────────
+function App() {
+  const [pantalla, setPantalla] = useState("selector"); // selector | minorista | mayorista | clientes | admin
+  const [adminMode, setAdminMode] = useState(false);
+  const [descCliente, setDescCliente] = useState(10);
+
+  // Combinar datos min y may en estructura unificada para admin
+  const productosMin = useMemo(()=>(window.LYL_MIN||[]).map(enriquecerProducto),[]);
+  const productosMay = useMemo(()=>(window.LYL_MAY||[]).map(enriquecerProducto),[]);
+
+  // Para el panel admin: fusionar min+may por clave
+  const productosAdmin = useMemo(()=>{
+    const map={};
+    productosMin.forEach(p=>{
+      const k=`${p.articulo}||${p.medidas}||${p.material}`;
+      if(!map[k]) map[k]={...p,precio_min:p.precio,precio_may:0};
+      else map[k].precio_min=p.precio;
+    });
+    productosMay.forEach(p=>{
+      const k=`${p.articulo}||${p.medidas}||${p.material}`;
+      if(!map[k]) map[k]={...p,precio_min:0,precio_may:p.precio};
+      else map[k].precio_may=p.precio;
+    });
+    return Object.values(map);
+  },[productosMin,productosMay]);
+
+  if(pantalla==="selector")
+    return e(PantallaSelector,{
+      onSelect:p=>setPantalla(p),
+      onAdmin:()=>{setAdminMode(true);setPantalla("admin");}
+    });
+  if(pantalla==="admin")
+    return e(PanelAdmin,{productos:productosAdmin,onVolver:()=>{setAdminMode(false);setPantalla("selector");}});
+  if(pantalla==="minorista")
+    return e(ModoMinorista,{productos:productosMin,onVolver:()=>setPantalla("selector"),adminMode});
+  if(pantalla==="mayorista")
+    return e(Presupuestador,{modo:"mayorista",productos:productosMay,onVolver:()=>setPantalla("selector"),adminMode});
+  if(pantalla==="clientes")
+    return e(Presupuestador,{modo:"clientes",productos:productosMin,descFijo:descCliente,onVolver:()=>setPantalla("selector"),adminMode});
+  return null;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(e(App));
+</script>
+
+<!--
+  DATOS — agregar antes del cierre </body>:
+  <script src="productosmin.js"></script>
+  <script src="productosmay.js"></script>
+  Los archivos deben definir window.LYL_MIN y window.LYL_MAY respectivamente.
+  Ver README.md para instrucciones de formato.
+-->
+<script src="productosmin.js"></script>
+<script src="productosmay.js"></script>
+</body>
+</html>
