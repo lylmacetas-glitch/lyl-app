@@ -202,7 +202,7 @@ function Header({ modo, color, fecha, itemCount, vistaActual, onCambiarVista, on
       padding:"12px 16px", display:"flex", justifyContent:"space-between",
       alignItems:"center", position:"sticky", top:0, zIndex:100 } },
     e('div', { style:{ display:"flex", alignItems:"center", gap:12 } },
-      e('button', { onClick:onVolver, style:{ background:"transparent", border:"none",
+      onVolver && e('button', { onClick:onVolver, style:{ background:"transparent", border:"none",
           color:"#aaa", fontSize:18, lineHeight:1, padding:"0 4px" } }, "←"),
       e('div', null,
         e('div', { style:{ fontSize:12, fontWeight:700, color, letterSpacing:.5 } },
@@ -871,7 +871,14 @@ function PanelAdmin({ productos, onVolver }) {
 // APP PRINCIPAL
 // ─────────────────────────────────────────────
 function App() {
-  const [pantalla, setPantalla] = useState("selector"); // selector | minorista | mayorista | clientes | admin
+  // Detectar modo por URL: ?modo=mayorista | ?modo=minorista | ?modo=clientes
+  const modoUrl = useMemo(()=>{
+    const p = new URLSearchParams(window.location.search).get("modo");
+    return ["minorista","mayorista","clientes"].includes(p) ? p : "selector";
+  },[]);
+  // Si entró por link directo, ocultar botón volver al selector
+  const linkDirecto = modoUrl !== "selector";
+  const [pantalla, setPantalla] = useState(modoUrl);
   const [adminMode, setAdminMode] = useState(false);
   const [descCliente, setDescCliente] = useState(10);
 
@@ -903,11 +910,11 @@ function App() {
   if(pantalla==="admin")
     return e(PanelAdmin,{productos:productosAdmin,onVolver:()=>{setAdminMode(false);setPantalla("selector");}});
   if(pantalla==="minorista")
-    return e(ModoMinorista,{productos:productosMin,onVolver:()=>setPantalla("selector"),adminMode});
+    return e(ModoMinorista,{productos:productosMin,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode});
   if(pantalla==="mayorista")
-    return e(Presupuestador,{modo:"mayorista",productos:productosMay,onVolver:()=>setPantalla("selector"),adminMode});
+    return e(Presupuestador,{modo:"mayorista",productos:productosMay,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode});
   if(pantalla==="clientes")
-    return e(Presupuestador,{modo:"clientes",productos:productosMin,descFijo:descCliente,onVolver:()=>setPantalla("selector"),adminMode});
+    return e(Presupuestador,{modo:"clientes",productos:productosMin,descFijo:descCliente,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode});
   return null;
 }
 
@@ -921,7 +928,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(e(App));
   Los archivos deben definir window.LYL_MIN y window.LYL_MAY respectivamente.
   Ver README.md para instrucciones de formato.
 -->
-<script src="productosmin.js"></script>
-<script src="productosmay.js"></script>
 </body>
 </html>
