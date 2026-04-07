@@ -56,8 +56,12 @@ function clasificarInsumo(nombre) {
 // CONSTANTES
 // ─────────────────────────────────────────────
 const WA = "5491157554899";
-const FECHA_MIN = "24-mar-2026";
-const FECHA_MAY = "26-mar-2026";
+// Fecha automática — siempre muestra el día de hoy
+const hoy = new Date();
+const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const FECHA_HOY = `${hoy.getDate()}-${MESES[hoy.getMonth()]}-${hoy.getFullYear()}`;
+const FECHA_MIN = FECHA_HOY;
+const FECHA_MAY = FECHA_HOY;
 const PASS_ADMIN = "lyl2024";
 const PASS_MAYOR = "lyl2024";
 
@@ -222,12 +226,38 @@ function Header({ modo, color, fecha, itemCount, vistaActual, onCambiarVista, on
 // ─────────────────────────────────────────────
 // FILTROS DE BÚSQUEDA (compartido)
 // ─────────────────────────────────────────────
-function Filtros({ buscar, setBuscar, material, setMaterial, pintada, setPintada, color, modo }) {
+function Filtros({ buscar, setBuscar, material, setMaterial, pintada, setPintada, color, modo, precioMin, setPrecioMin, precioMax, setPrecioMax }) {
   const [seccion, setSeccion] = useState("macetas"); // macetas | insumos
+  const [mostrarPrecio, setMostrarPrecio] = useState(false);
   const mats = seccion === "macetas" ? MATERIALES_MACETAS : MATERIALES_INSUMOS;
 
   return e('div', { style:{ padding:"10px 14px 0" } },
-    e(Input, { value:buscar, onChange:setBuscar, placeholder:"🔍 Buscar por nombre o medida..." }),
+    e('div', { style:{ display:"flex", gap:6, marginBottom:8 } },
+      e(Input, { value:buscar, onChange:setBuscar, placeholder:"🔍 Buscar por nombre o medida...", style:{ flex:1 } }),
+      e('button', { onClick:()=>setMostrarPrecio(v=>!v), style:{
+        padding:"8px 11px", borderRadius:8, border:`1px solid ${mostrarPrecio?color:"#ddd"}`,
+        background: mostrarPrecio?color+"22":"transparent", color: mostrarPrecio?color:"#888",
+        fontSize:11, fontWeight:600, whiteSpace:"nowrap"
+      }}, "💲 Precio")
+    ),
+    mostrarPrecio && e('div', { style:{ background:"#fff", borderRadius:10, padding:"10px 12px",
+        border:`1px solid ${color}44`, marginBottom:8 } },
+      e('div', { style:{ fontSize:11, color:"#777", marginBottom:6 } }, "Rango de precio:"),
+      e('div', { style:{ display:"flex", gap:8, alignItems:"center" } },
+        e('input', { type:"number", placeholder:"Mín $", value:precioMin,
+          onChange:ev=>setPrecioMin(ev.target.value),
+          style:{ flex:1, padding:"6px 8px", borderRadius:7, border:"1px solid #ddd",
+            fontSize:12, fontFamily:"inherit" } }),
+        e('span', { style:{ color:"#aaa", fontSize:12 } }, "—"),
+        e('input', { type:"number", placeholder:"Máx $", value:precioMax,
+          onChange:ev=>setPrecioMax(ev.target.value),
+          style:{ flex:1, padding:"6px 8px", borderRadius:7, border:"1px solid #ddd",
+            fontSize:12, fontFamily:"inherit" } }),
+        (precioMin||precioMax) && e('button', { onClick:()=>{ setPrecioMin(""); setPrecioMax(""); },
+          style:{ padding:"6px 8px", borderRadius:7, border:"1px solid #ddd",
+            background:"transparent", color:"#aaa", fontSize:11 } }, "✕")
+      )
+    ),
     // Sección tabs
     e('div', { style:{ display:"flex", gap:8, margin:"8px 0 6px" } },
       ["macetas","insumos"].map(s =>
@@ -307,6 +337,8 @@ function ModoMinorista({ productos, onVolver, adminMode }) {
   const [material, setMaterial] = useState("Todos");
   const [pintada, setPintada] = useState("Todos");
   const [descPct, setDescPct] = useState(0);
+  const [precioMin, setPrecioMin] = useState("");
+  const [precioMax, setPrecioMax] = useState("");
   const [carrito, setCarrito] = useState({});
   const [nombre, setNombre] = useState("");
   const [nota, setNota] = useState("");
@@ -323,9 +355,13 @@ function ModoMinorista({ productos, onVolver, adminMode }) {
       : [material];
     const filtrados = productos.filter(p=>{
       const inMat = material==="Todos" || p.material===material;
-      const inBuscar = !b || p.articulo.toLowerCase().includes(b) || p.medidas.toLowerCase().includes(b);
+      const tokens = b.split(/\s+/).filter(Boolean);
+      const texto = (p.articulo + " " + p.medidas).toLowerCase();
+      const inBuscar = !b || tokens.every(t => texto.includes(t));
       const inPint = pintada==="Todos"||(pintada==="Pintada"&&p.pintada)||(pintada==="Sin pintar"&&!p.pintada);
-      return inMat && inBuscar && inPint;
+      const pMin = precioMin ? p.precio >= parseFloat(precioMin) : true;
+      const pMax = precioMax ? p.precio <= parseFloat(precioMax) : true;
+      return inMat && inBuscar && inPint && pMin && pMax;
     });
     const map={};
     filtrados.forEach(p=>{
@@ -334,7 +370,7 @@ function ModoMinorista({ productos, onVolver, adminMode }) {
       map[k].variantes.push({medidas:p.medidas,precio:p.precio});
     });
     return Object.values(map);
-  },[productos,buscar,material,pintada]);
+  },[productos,buscar,material,pintada,precioMin,precioMax]);
 
   const agregar=(grupo,v,precio)=>{
     const key=`${grupo.articulo}||${v.medidas}||${grupo.material}||${grupo.pintada}`;
@@ -394,7 +430,7 @@ function ModoMinorista({ productos, onVolver, adminMode }) {
           )
         )
       ),
-      e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo:"minorista"}),
+      e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo:"minorista",precioMin,setPrecioMin,precioMax,setPrecioMax}),
       e('div', { style:{ padding:"0 14px 80px" } },
         grupos.length===0
           ? e('div',{style:{textAlign:"center",color:"#aaa",padding:40}},"Sin resultados")
@@ -459,6 +495,8 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode })
   const [buscar, setBuscar] = useState("");
   const [material, setMaterial] = useState("Todos");
   const [pintada, setPintada] = useState("Todos");
+  const [precioMin, setPrecioMin] = useState("");
+  const [precioMax, setPrecioMax] = useState("");
   const [presupuesto, setPresupuesto] = useState(b.presupuesto||[]);
   const [cliente, setCliente] = useState(b.cliente||"");
   const [proyecto, setProyecto] = useState(b.proyecto||"");
@@ -506,7 +544,9 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode })
       const inMat=material==="Todos"||p.material===material;
       const inB=!b2||p.articulo.toLowerCase().includes(b2)||p.medidas.toLowerCase().includes(b2);
       const inP=pintada==="Todos"||(pintada==="Pintada"&&p.pintada)||(pintada==="Sin pintar"&&!p.pintada);
-      return inMat&&inB&&inP;
+      const pMin=precioMin?p.precio>=parseFloat(precioMin):true;
+      const pMax=precioMax?p.precio<=parseFloat(precioMax):true;
+      return inMat&&inB&&inP&&pMin&&pMax;
     });
     const map={};
     filtrados.forEach(p=>{
@@ -515,7 +555,7 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode })
       map[k].variantes.push({medidas:p.medidas,precio:p.precio});
     });
     return Object.values(map);
-  },[productos,buscar,material,pintada]);
+  },[productos,buscar,material,pintada,precioMin,precioMax]);
 
   const envioNum=parseFloat(String(envio).replace(/[^\d.]/g,""))||0;
   const descPct=parseFloat(String(descuento))||0;
@@ -600,7 +640,7 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode })
 
   // CATALOGO VIEW
   const catalogo = e('div', null,
-    e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo}),
+    e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo,precioMin,setPrecioMin,precioMax,setPrecioMax}),
     e('div', { style:{ padding:"0 14px 80px" } },
       grupos.length===0
         ?e('div',{style:{textAlign:"center",color:"#aaa",padding:40}},"Sin resultados")
@@ -921,10 +961,12 @@ function App() {
 ReactDOM.createRoot(document.getElementById('root')).render(e(App));
 </script>
 
-
-   
+<!--
+  DATOS — agregar antes del cierre </body>:
   <script src="productosmin.js"></script>
   <script src="productosmay.js"></script>
-  
+  Los archivos deben definir window.LYL_MIN y window.LYL_MAY respectivamente.
+  Ver README.md para instrucciones de formato.
+-->
 </body>
 </html>
