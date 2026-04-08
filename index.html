@@ -325,7 +325,7 @@ function VarianteFibro({ v, grupo, descPct, pct, fmt, color, onAgregar }) {
                   color: op.key==="cruda" ? "#333" : op.key==="imp" ? "#2d6a4a" : "#6a2d8a" } },
                 fmt(precioFinal)),
               e('button', {
-                onClick:()=>onAgregar(grupo, vOp, precioFinal),
+                onClick:()=>onAgregar(grupo, {...vOp, articulo: grupo.articulo + " · " + op.label}, precioFinal),
                 style:{ padding:"4px 12px", borderRadius:7, border:"none", fontSize:11, fontWeight:600,
                   background: op.key==="cruda" ? "#888" : op.key==="imp" ? "#2d6a4a" : "#6a2d8a",
                   color:"#fff", whiteSpace:"nowrap" }
