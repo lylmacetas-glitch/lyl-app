@@ -288,6 +288,56 @@ function Filtros({ buscar, setBuscar, material, setMaterial, pintada, setPintada
 // ─────────────────────────────────────────────
 // CARD DE PRODUCTO (catálogo)
 // ─────────────────────────────────────────────
+
+function VarianteFibro({ v, grupo, descPct, pct, fmt, color, onAgregar }) {
+  const precios = [
+    { key:"cruda", label:"Natural / Cruda",
+      desc:"Sin tratamiento, color cemento natural. Apta para uso con impermeabilizante propio.",
+      precio: v.min_cruda || v.may_cruda || v.precio },
+    v.min_imp || v.may_imp ? { key:"imp", label:"Impermeabilizada",
+      desc:"Sellado interior de alta calidad. Evita manchas de humedad en el exterior.",
+      precio: v.min_imp || v.may_imp } : null,
+    v.min_pint || v.may_pint ? { key:"pint", label:"Pintada",
+      desc:"Impermeabilizada + pintura exterior en el color que elijas. Consultar colores disponibles.",
+      precio: v.min_pint || v.may_pint } : null,
+  ].filter(Boolean);
+
+  return e('div', { style:{ padding:"8px 12px", borderBottom:"1px solid #f5f3ef" } },
+    e('div', { style:{ fontSize:12, color:"#888", marginBottom:8, fontWeight:500 } }, v.medidas || "—"),
+    e('div', { style:{ display:"flex", flexDirection:"column", gap:6 } },
+      precios.map(op => {
+        const precioFinal = descPct > 0 ? pct(op.precio, descPct) : op.precio;
+        const vOp = { ...v, precio: precioFinal, acabadoLabel: op.label };
+        return e('div', { key:op.key, style:{
+            background: op.key==="cruda" ? "#fafafa" : op.key==="imp" ? "#f0f7f2" : "#f8f0ff",
+            borderRadius:10, padding:"8px 10px",
+            border: op.key==="cruda" ? "1px solid #eee" : op.key==="imp" ? "1px solid #c8e6d4" : "1px solid #e0c8f0"
+          }},
+          e('div', { style:{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8 } },
+            e('div', { style:{ flex:1 } },
+              e('div', { style:{ fontSize:12, fontWeight:700,
+                  color: op.key==="cruda" ? "#555" : op.key==="imp" ? "#2d6a4a" : "#6a2d8a" } },
+                op.label),
+              e('div', { style:{ fontSize:10, color:"#aaa", marginTop:2, lineHeight:1.4 } }, op.desc)
+            ),
+            e('div', { style:{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 } },
+              e('span', { style:{ fontSize:14, fontWeight:700,
+                  color: op.key==="cruda" ? "#333" : op.key==="imp" ? "#2d6a4a" : "#6a2d8a" } },
+                fmt(precioFinal)),
+              e('button', {
+                onClick:()=>onAgregar(grupo, vOp, precioFinal),
+                style:{ padding:"4px 12px", borderRadius:7, border:"none", fontSize:11, fontWeight:600,
+                  background: op.key==="cruda" ? "#888" : op.key==="imp" ? "#2d6a4a" : "#6a2d8a",
+                  color:"#fff", whiteSpace:"nowrap" }
+              }, "+ Agregar")
+            )
+          )
+        );
+      })
+    )
+  );
+}
+
 function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false }) {
   const color = MODOS[modo]?.color || "#333";
   const dc = MAT_COLORS[grupo.material] || "#888";
@@ -304,6 +354,9 @@ function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false }) {
       )
     ),
     grupo.variantes.map((v, vi) => {
+      if (grupo.material === "Fibrocemento" && v.acabados) {
+        return e(VarianteFibro, { key:vi, v, grupo, descPct, pct, fmt, color, onAgregar, adminMode });
+      }
       const precioFinal = descPct > 0 ? pct(v.precio, descPct) : v.precio;
       return e('div', { key:vi, style:{ padding:"8px 12px",
           borderBottom: vi < grupo.variantes.length-1 ? "1px solid #f5f3ef" : "none",
@@ -377,9 +430,11 @@ function ModoMinorista({ productos, onVolver, adminMode }) {
     });
     const map={};
     filtrados.forEach(p=>{
-      const k=`${p.articulo}||${p.material}||${p.pintada}`;
+      const k=`${p.articulo}||${p.material}`;
       if(!map[k]) map[k]={...p,variantes:[]};
-      map[k].variantes.push({medidas:p.medidas,precio:p.precio});
+      map[k].variantes.push({medidas:p.medidas,precio:p.precio,
+        acabados:p.acabados,min_cruda:p.min_cruda,min_imp:p.min_imp,min_pint:p.min_pint,
+        may_cruda:p.may_cruda,may_imp:p.may_imp,may_pint:p.may_pint});
     });
     return Object.values(map);
   },[productos,buscar,material,pintada,precioMin,precioMax]);
@@ -562,9 +617,11 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode })
     });
     const map={};
     filtrados.forEach(p=>{
-      const k=`${p.articulo}||${p.material}||${p.pintada}`;
+      const k=`${p.articulo}||${p.material}`;
       if(!map[k]) map[k]={...p,variantes:[]};
-      map[k].variantes.push({medidas:p.medidas,precio:p.precio});
+      map[k].variantes.push({medidas:p.medidas,precio:p.precio,
+        acabados:p.acabados,min_cruda:p.min_cruda,min_imp:p.min_imp,min_pint:p.min_pint,
+        may_cruda:p.may_cruda,may_imp:p.may_imp,may_pint:p.may_pint});
     });
     return Object.values(map);
   },[productos,buscar,material,pintada,precioMin,precioMax]);
