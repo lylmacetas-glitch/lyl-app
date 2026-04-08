@@ -173,6 +173,13 @@ function PantallaSelector({ onSelect, onAdmin }) {
         e('div', { style:{ fontSize:11, color:"#8b5e3c", fontWeight:700, letterSpacing:1, marginBottom:4 } }, "⭐ LISTA CLIENTES"),
         e('div', { style:{ fontSize:14, color:"#2c2c2c" } }, "Precios personalizados con descuento fijo")
       ),
+      // Fibrocemento
+      e('button', { onClick:()=>onSelect("fibrocemento"), style:{
+        padding:"18px 20px", borderRadius:14, border:"2px solid #5a5a5a",
+        background:"#fff", textAlign:"left" } },
+        e('div', { style:{ fontSize:11, color:"#5a5a5a", fontWeight:700, letterSpacing:1, marginBottom:4 } }, "🪨 FIBROCEMENTO"),
+        e('div', { style:{ fontSize:14, color:"#2c2c2c" } }, "Catálogo completo · cruda · impermeabilizada · pintada")
+      ),
     ),
 
     // Admin toggle
@@ -918,6 +925,154 @@ function PanelAdmin({ productos, onVolver }) {
   );
 }
 
+
+// ─────────────────────────────────────────────
+// MODO FIBROCEMENTO
+// ─────────────────────────────────────────────
+function ModoFibrocemento({ productos, onVolver }) {
+  const { useState, useMemo } = React;
+  const color = "#5a5a5a";
+  const colorAc = "#5a5a5a";
+  const [buscar, setBuscar] = useState("");
+  const [material, setMaterial] = useState("Todos");
+  const [modo, setModo] = useState("minorista"); // minorista | mayorista
+
+  const fmt = v => "$ " + Math.round(v).toLocaleString("es-AR");
+
+  // Modelos únicos para filtro
+  const modelos = useMemo(() => {
+    const set = new Set((productos||[]).map(p => p.articulo));
+    return ["Todos", ...Array.from(set).sort()];
+  }, [productos]);
+
+  // Filtrado
+  const filtrados = useMemo(() => {
+    const b = buscar.toLowerCase().trim();
+    const tokens = b.split(/\s+/).filter(Boolean);
+    return (productos||[]).filter(p => {
+      const texto = (p.articulo + " " + p.medidas).toLowerCase();
+      const inBuscar = !b || tokens.every(t => texto.includes(t));
+      const inMat = material === "Todos" || p.articulo === material;
+      return inBuscar && inMat;
+    });
+  }, [productos, buscar, material]);
+
+  // Agrupar por modelo
+  const grupos = useMemo(() => {
+    const map = {};
+    filtrados.forEach(p => {
+      if (!map[p.articulo]) map[p.articulo] = { articulo: p.articulo, items: [] };
+      map[p.articulo].items.push(p);
+    });
+    return Object.values(map);
+  }, [filtrados]);
+
+  return e('div', { style:{ maxWidth:480, margin:"0 auto", minHeight:"100vh", background:"#f8f6f2" } },
+    // Header
+    e('div', { style:{ padding:"14px 16px 10px", background:"#fff",
+        borderBottom:"1px solid #e8e4de", position:"sticky", top:0, zIndex:10 } },
+      e('div', { style:{ display:"flex", alignItems:"center", gap:10, marginBottom:10 } },
+        onVolver && e('button', { onClick:onVolver, style:{ background:"transparent", border:"none",
+            color:"#aaa", fontSize:18, lineHeight:1, padding:"0 4px" } }, "←"),
+        e('div', { style:{ flex:1 } },
+          e('div', { style:{ fontSize:13, fontWeight:700, color:colorAc } }, "🪨 Fibrocemento"),
+          e('div', { style:{ fontSize:11, color:"#aaa" } }, `Lista ${new Date().getDate()}-${["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"][new Date().getMonth()]}-${new Date().getFullYear()}`)
+        )
+      ),
+      // Toggle minorista/mayorista
+      e('div', { style:{ display:"flex", gap:6, marginBottom:10 } },
+        ["minorista","mayorista"].map(m =>
+          e('button', { key:m, onClick:()=>setModo(m), style:{
+            flex:1, padding:"7px 0", borderRadius:8, border:"none", fontSize:12, fontWeight:600,
+            background: modo===m ? colorAc : "#f0ede8", color: modo===m ? "#fff" : "#888"
+          }}, m === "minorista" ? "🌿 Minorista" : "📦 Mayorista")
+        )
+      ),
+      // Buscador
+      e('div', { style:{ display:"flex", gap:6 } },
+        e('input', { value:buscar, onChange:ev=>setBuscar(ev.target.value),
+          placeholder:"🔍 Buscar modelo o medida...",
+          style:{ flex:1, padding:"8px 12px", borderRadius:8, border:"1px solid #ddd",
+            fontSize:14, fontFamily:"inherit", background:"#fafafa" } }),
+        buscar && e('button', { onClick:()=>setBuscar(""),
+          style:{ padding:"0 10px", borderRadius:8, border:"1px solid #ddd",
+            background:"transparent", color:"#aaa", fontSize:16 } }, "×")
+      )
+    ),
+    // Filtro por modelo
+    e('div', { style:{ padding:"8px 12px", overflowX:"auto", whiteSpace:"nowrap",
+        borderBottom:"1px solid #f0ede8", background:"#fff" } },
+      modelos.map(m =>
+        e('button', { key:m, onClick:()=>setMaterial(m), style:{
+          display:"inline-block", marginRight:6, padding:"4px 12px", borderRadius:20,
+          border:`1px solid ${material===m ? colorAc : "#ddd"}`,
+          background: material===m ? colorAc : "transparent",
+          color: material===m ? "#fff" : "#666", fontSize:12, fontWeight: material===m ? 600 : 400
+        }}, m)
+      )
+    ),
+    // Info precios de contado
+    e('div', { style:{ margin:"10px 14px 0", padding:"8px 12px", background:"#f0ede8",
+        borderRadius:8, fontSize:11, color:"#777" } },
+      "💳 Precios publicados corresponden a pago en efectivo o transferencia. Con tarjeta, según condiciones de financiación del banco."
+    ),
+    // Lista grupos
+    grupos.length === 0
+      ? e('div', { style:{ textAlign:"center", padding:40, color:"#aaa" } }, "Sin resultados")
+      : grupos.map(grupo =>
+          e('div', { key:grupo.articulo, style:{ margin:"12px 14px 0",
+              background:"#fff", borderRadius:12, border:"1px solid #e8e4de", overflow:"hidden" } },
+            // Nombre del modelo
+            e('div', { style:{ padding:"10px 14px 8px", borderBottom:"1px solid #f5f5f5",
+                fontSize:14, fontWeight:700, color:"#333" } },
+              grupo.articulo
+            ),
+            // Variantes
+            grupo.items.map(p =>
+              e('div', { key:p.medidas, style:{ padding:"10px 14px", borderBottom:"1px solid #f8f8f8" } },
+                // Medidas
+                e('div', { style:{ fontSize:12, color:"#888", marginBottom:8 } }, p.medidas),
+                // Opciones de acabado
+                e('div', { style:{ display:"flex", flexDirection:"column", gap:6 } },
+                  // Cruda
+                  e('div', { style:{ display:"flex", justifyContent:"space-between", alignItems:"center",
+                      padding:"8px 10px", background:"#fafafa", borderRadius:8, border:"1px solid #eee" } },
+                    e('div', null,
+                      e('div', { style:{ fontSize:12, fontWeight:600, color:"#555" } }, "Natural / Cruda"),
+                      e('div', { style:{ fontSize:10, color:"#aaa" } }, "Sin tratamiento · color cemento")
+                    ),
+                    e('span', { style:{ fontSize:14, fontWeight:700, color:"#333" } },
+                      fmt(modo === "minorista" ? p.min_cruda : p.may_cruda))
+                  ),
+                  // Impermeabilizada (si aplica)
+                  p.min_imp && e('div', { style:{ display:"flex", justifyContent:"space-between", alignItems:"center",
+                      padding:"8px 10px", background:"#f0f7f2", borderRadius:8, border:"1px solid #d4e8da" } },
+                    e('div', null,
+                      e('div', { style:{ fontSize:12, fontWeight:600, color:"#3a6b4a" } }, "Impermeabilizada"),
+                      e('div', { style:{ fontSize:10, color:"#7aaa8a" } }, "Sellado interior · evita manchas de humedad")
+                    ),
+                    e('span', { style:{ fontSize:14, fontWeight:700, color:"#2d5a3d" } },
+                      fmt(modo === "minorista" ? p.min_imp : p.may_imp))
+                  ),
+                  // Pintada (si aplica)
+                  p.min_pint && e('div', { style:{ display:"flex", justifyContent:"space-between", alignItems:"center",
+                      padding:"8px 10px", background:"#f5f0f8", borderRadius:8, border:"1px solid #ddd0e8" } },
+                    e('div', null,
+                      e('div', { style:{ fontSize:12, fontWeight:600, color:"#6a3a8a" } }, "Pintada"),
+                      e('div', { style:{ fontSize:10, color:"#aa80c0" } }, "Impermeabilizada + color exterior · consultar colores")
+                    ),
+                    e('span', { style:{ fontSize:14, fontWeight:700, color:"#5a2a7a" } },
+                      fmt(modo === "minorista" ? p.min_pint : p.may_pint))
+                  )
+                )
+              )
+            )
+          )
+        ),
+    e('div', { style:{ height:30 } })
+  );
+}
+
 // ─────────────────────────────────────────────
 // APP PRINCIPAL
 // ─────────────────────────────────────────────
@@ -925,7 +1080,7 @@ function App() {
   // Detectar modo por URL: ?modo=mayorista | ?modo=minorista | ?modo=clientes
   const modoUrl = useMemo(()=>{
     const p = new URLSearchParams(window.location.search).get("modo");
-    return ["minorista","mayorista","clientes"].includes(p) ? p : "selector";
+    return ["minorista","mayorista","clientes","fibrocemento"].includes(p) ? p : "selector";
   },[]);
   // Si entró por link directo, ocultar botón volver al selector
   const linkDirecto = modoUrl !== "selector";
@@ -966,6 +1121,8 @@ function App() {
     return e(Presupuestador,{modo:"mayorista",productos:productosMay,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode});
   if(pantalla==="clientes")
     return e(Presupuestador,{modo:"clientes",productos:productosMin,descFijo:descCliente,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode});
+  if(pantalla==="fibrocemento")
+    return e(ModoFibrocemento,{productos:window.LYL_FIBRO||[],onVolver:linkDirecto?null:()=>setPantalla("selector")});
   return null;
 }
 
@@ -974,5 +1131,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(e(App));
 
 <script src="productosmin.js"></script>
 <script src="productosmay.js"></script>
+<script src="productosfibro.js"></script>
 </body>
 </html>
