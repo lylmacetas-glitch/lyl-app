@@ -291,9 +291,9 @@ window.LYL_MIN = [
   // ROTOMOLDEADO
   { articulo: "Misionera", medidas: "20cm c/plato", material: "Rotomoldeado", pintada: false, precio: 8700 },
   { articulo: "Misionera", medidas: "30cm c/plato", material: "Rotomoldeado", pintada: false, precio: 20900 },
-  { articulo: "Misionera Lisa", medidas: "40cm", material: "Rotomoldeado", pintada: false, precio: 47900 },
-  { articulo: "Misionera Lisa", medidas: "50cm", material: "Rotomoldeado", pintada: false, precio: 80400 },
-  { articulo: "Misionera Lisa", medidas: "60cm", material: "Rotomoldeado", pintada: false, precio: 119600 },
+  { articulo: "Misionera", medidas: "40cm", material: "Rotomoldeado", pintada: false, precio: 47900 },
+  { articulo: "Misionera", medidas: "50cm", material: "Rotomoldeado", pintada: false, precio: 80400 },
+  { articulo: "Misionera", medidas: "60cm", material: "Rotomoldeado", pintada: false, precio: 119600 },
   { articulo: "Misionera Texturada", medidas: "20h x 15Ø x 18b", material: "Rotomoldeado", pintada: false, precio: 8100 },
   { articulo: "Misionera Texturada", medidas: "30h x 22Ø x 18b", material: "Rotomoldeado", pintada: false, precio: 25110 },
   { articulo: "Misionera Texturada", medidas: "40cm (29h x 22Ø x 18b)", material: "Rotomoldeado", pintada: false, precio: 42590 },
