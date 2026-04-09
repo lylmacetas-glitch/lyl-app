@@ -440,12 +440,13 @@ function ModoMinorista({ productos, onVolver, adminMode }) {
   },[productos,buscar,material,pintada,precioMin,precioMax]);
 
   const agregar=(grupo,v,precio)=>{
-    const key=`${grupo.articulo}||${v.medidas}||${grupo.material}||${grupo.pintada}`;
+    const articuloFinal = v.articulo || grupo.articulo;
+    const key=`${articuloFinal}||${v.medidas}||${grupo.material}`;
     setCarrito(prev=>{
       const ex=prev[key];
       return {...prev,[key]:ex
         ?{...ex,cantidad:ex.cantidad+1}
-        :{articulo:grupo.articulo,medidas:v.medidas,material:grupo.material,
+        :{articulo:articuloFinal,medidas:v.medidas,material:grupo.material,
           pintada:grupo.pintada,precio,cantidad:1}};
     });
   };
