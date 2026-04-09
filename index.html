@@ -152,13 +152,7 @@ function PantallaSelector({ onSelect, onAdmin }) {
       alt:"LyL Macetas", style:{ height:52, marginBottom:32 } }),
 
     e('div', { style:{ width:"100%", maxWidth:380, display:"flex", flexDirection:"column", gap:12 } },
-      // Minorista
-      e('button', { onClick:()=>onSelect("minorista"), style:{
-        padding:"18px 20px", borderRadius:14, border:"2px solid #4a7c59",
-        background:"#fff", textAlign:"left", transition:"all .15s" } },
-        e('div', { style:{ fontSize:11, color:"#4a7c59", fontWeight:700, letterSpacing:1, marginBottom:4 } }, "🌿 LISTA MINORISTA"),
-        e('div', { style:{ fontSize:14, color:"#2c2c2c" } }, "Precios al público · consulta por WhatsApp")
-      ),
+
       // Mayorista
       e('button', { onClick:()=>onSelect("mayorista"), style:{
         padding:"18px 20px", borderRadius:14, border:"2px solid #2c5f7a",
@@ -604,7 +598,6 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode })
       saveLS(storageKey,{presupuesto:nuevo,cliente,proyecto,envio,descuento,mostrarAnticipo,numPresup});
       return nuevo;
     });
-    setVista("presupuesto");
   };
 
   const grupos = useMemo(()=>{
