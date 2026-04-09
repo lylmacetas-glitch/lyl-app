@@ -307,7 +307,7 @@ function VarianteFibro({ v, grupo, descPct, pct, fmt, color, onAgregar }) {
     e('div', { style:{ display:"flex", flexDirection:"column", gap:6 } },
       precios.map(op => {
         const precioFinal = descPct > 0 ? pct(op.precio, descPct) : op.precio;
-        const vOp = { ...v, precio: precioFinal, acabadoLabel: op.label };
+        const vOp = { ...v, articulo: grupo.articulo + ' · ' + op.label, precio: precioFinal, acabadoLabel: op.label };
         return e('div', { key:op.key, style:{
             background: op.key==="cruda" ? "#fafafa" : op.key==="imp" ? "#f0f7f2" : "#f8f0ff",
             borderRadius:10, padding:"8px 10px",
@@ -325,7 +325,7 @@ function VarianteFibro({ v, grupo, descPct, pct, fmt, color, onAgregar }) {
                   color: op.key==="cruda" ? "#333" : op.key==="imp" ? "#2d6a4a" : "#6a2d8a" } },
                 fmt(precioFinal)),
               e('button', {
-                onClick:()=>onAgregar(grupo, {...vOp, articulo: grupo.articulo + " · " + op.label}, precioFinal),
+                onClick:()=>onAgregar(grupo, vOp, precioFinal),
                 style:{ padding:"4px 12px", borderRadius:7, border:"none", fontSize:11, fontWeight:600,
                   background: op.key==="cruda" ? "#888" : op.key==="imp" ? "#2d6a4a" : "#6a2d8a",
                   color:"#fff", whiteSpace:"nowrap" }
@@ -341,7 +341,7 @@ function VarianteFibro({ v, grupo, descPct, pct, fmt, color, onAgregar }) {
 function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false }) {
   const color = MODOS[modo]?.color || "#333";
   const dc = MAT_COLORS[grupo.material] || "#888";
-  const ps = (grupo.material==="Barro"||MATERIALES_INSUMOS.includes(grupo.material))
+  const ps = (grupo.material==="Barro"||grupo.material==="Fibrocemento"||MATERIALES_INSUMOS.includes(grupo.material))
     ? "" : grupo.pintada ? " · pintada" : " · sin pintar";
 
   return e('div', { style:{ background:"#fff", borderRadius:10, marginBottom:8,
@@ -423,7 +423,7 @@ function ModoMinorista({ productos, onVolver, adminMode }) {
       const tokens = b.split(/\s+/).filter(Boolean);
       const texto = (p.articulo + " " + p.medidas).toLowerCase();
       const inBuscar = !b || tokens.every(t => texto.includes(t));
-      const inPint = pintada==="Todos"||(pintada==="Pintada"&&p.pintada)||(pintada==="Sin pintar"&&!p.pintada);
+      const inPint = p.material==="Fibrocemento" || pintada==="Todos"||(pintada==="Pintada"&&p.pintada)||(pintada==="Sin pintar"&&!p.pintada);
       const pMin = precioMin ? p.precio >= parseFloat(precioMin) : true;
       const pMax = precioMax ? p.precio <= parseFloat(precioMax) : true;
       return inMat && inBuscar && inPint && pMin && pMax;
@@ -447,7 +447,7 @@ function ModoMinorista({ productos, onVolver, adminMode }) {
       return {...prev,[key]:ex
         ?{...ex,cantidad:ex.cantidad+1}
         :{articulo:articuloFinal,medidas:v.medidas,material:grupo.material,
-          pintada:grupo.pintada,precio,cantidad:1}};
+          pintada:grupo.pintada,precio,cantidad:1,_key:key}};
     });
   };
 
@@ -523,7 +523,7 @@ function ModoMinorista({ productos, onVolver, adminMode }) {
               e(Input,{value:nota,onChange:setNota,placeholder:"Nota o consulta adicional (opcional)"})
             ),
             Object.values(carrito).map((item,i)=>{
-              const key=`${item.articulo}||${item.medidas}||${item.material}||${item.pintada}`;
+              const key=item._key||`${item.articulo}||${item.medidas}||${item.material}`;
               return e('div',{key:i,style:{background:"#fff",borderRadius:10,padding:"10px 12px",
                   marginBottom:6,border:"1px solid #e8e4de",display:"flex",justifyContent:"space-between",alignItems:"center"}},
                 e('div',null,
@@ -593,12 +593,13 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode })
 
   const agregar=(grupo,v,precio)=>{
     asignarNum();
-    const key=`${grupo.articulo}||${v.medidas}||${grupo.material}||${grupo.pintada}||${Date.now()}`;
+    const articuloFinal = v.articulo || grupo.articulo;
+    const key=`${articuloFinal}||${v.medidas}||${grupo.material}`;
     setPresupuesto(prev=>{
-      const ex=prev.find(i=>i.articulo===grupo.articulo&&i.medidas===v.medidas&&i.material===grupo.material&&i.pintada===grupo.pintada);
+      const ex=prev.find(i=>i.key===key);
       const nuevo=ex
-        ?prev.map(i=>i.key===ex.key?{...i,cantidad:i.cantidad+1}:i)
-        :[...prev,{articulo:grupo.articulo,medidas:v.medidas,material:grupo.material,
+        ?prev.map(i=>i.key===key?{...i,cantidad:i.cantidad+1}:i)
+        :[...prev,{articulo:articuloFinal,medidas:v.medidas,material:grupo.material,
             pintada:grupo.pintada,precio,key,cantidad:1,nota:"",sinDesc:false}];
       saveLS(storageKey,{presupuesto:nuevo,cliente,proyecto,envio,descuento,mostrarAnticipo,numPresup});
       return nuevo;
@@ -611,7 +612,7 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode })
     const filtrados=productos.filter(p=>{
       const inMat=material==="Todos"||p.material===material;
       const inB=!b2||p.articulo.toLowerCase().includes(b2)||p.medidas.toLowerCase().includes(b2);
-      const inP=pintada==="Todos"||(pintada==="Pintada"&&p.pintada)||(pintada==="Sin pintar"&&!p.pintada);
+      const inP=p.material==="Fibrocemento"||pintada==="Todos"||(pintada==="Pintada"&&p.pintada)||(pintada==="Sin pintar"&&!p.pintada);
       const pMin=precioMin?p.precio>=parseFloat(precioMin):true;
       const pMax=precioMax?p.precio<=parseFloat(precioMax):true;
       return inMat&&inB&&inP&&pMin&&pMax;
