@@ -611,7 +611,7 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
     Object.values(grupos).forEach(g => {
       txt += `*${g.articulo}* · ${g.material}\n`;
       g.items.forEach(i => { txt += `  ▫️ ${i.medidas} — $${Math.round(i.precio).toLocaleString("es-AR")}\n`; });
-      txt += `🔗 lylmacetas-glitch.github.io/lyl-app?modo=${modo_url}&buscar=${encodeURIComponent(g.articulo.toLowerCase())}\n\n`;
+      txt += "\n";
     });
     txt += "_Precios de contado. Con tarjeta según condiciones del banco._";
     window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank");
