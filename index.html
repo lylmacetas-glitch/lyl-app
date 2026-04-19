@@ -283,7 +283,7 @@ function Filtros({ buscar, setBuscar, material, setMaterial, pintada, setPintada
 // CARD DE PRODUCTO (catálogo)
 // ─────────────────────────────────────────────
 
-function VarianteFibro({ v, grupo, descPct, pct, fmt, color, onAgregar }) {
+function VarianteFibro({ v, grupo, descPct, pct, fmt, color, onAgregar, compartirSel={}, toggleCompartir=null }) {
   const precios = [
     { key:"cruda", label:"Natural / Cruda",
       desc:"Sin tratamiento, color cemento natural. Apta para uso con impermeabilizante propio.",
@@ -318,12 +318,21 @@ function VarianteFibro({ v, grupo, descPct, pct, fmt, color, onAgregar }) {
               e('span', { style:{ fontSize:14, fontWeight:700,
                   color: op.key==="cruda" ? "#333" : op.key==="imp" ? "#2d6a4a" : "#6a2d8a" } },
                 fmt(precioFinal)),
-              e('button', {
-                onClick:()=>onAgregar(grupo, vOp, precioFinal),
-                style:{ padding:"4px 12px", borderRadius:7, border:"none", fontSize:11, fontWeight:600,
-                  background: op.key==="cruda" ? "#888" : op.key==="imp" ? "#2d6a4a" : "#6a2d8a",
-                  color:"#fff", whiteSpace:"nowrap" }
-              }, "+ Agregar")
+              e('div', { style:{ display:"flex", gap:5, alignItems:"center" } },
+                toggleCompartir && e('button', {
+                  onClick:()=>{ const k=`${vOp.articulo}||${grupo.material}||${v.medidas}`; toggleCompartir(k,grupo,vOp,precioFinal); },
+                  style:{ width:26, height:26, borderRadius:6, border:"1px solid #ddd",
+                    background: compartirSel[`${vOp.articulo}||${grupo.material}||${v.medidas}`] ? "#25D366" : "transparent",
+                    color: compartirSel[`${vOp.articulo}||${grupo.material}||${v.medidas}`] ? "#fff" : "#aaa",
+                    fontSize:13, display:"flex", alignItems:"center", justifyContent:"center" }
+                }, "✓"),
+                e('button', {
+                  onClick:()=>onAgregar(grupo, vOp, precioFinal),
+                  style:{ padding:"4px 12px", borderRadius:7, border:"none", fontSize:11, fontWeight:600,
+                    background: op.key==="cruda" ? "#888" : op.key==="imp" ? "#2d6a4a" : "#6a2d8a",
+                    color:"#fff", whiteSpace:"nowrap" }
+                }, "+ Agregar")
+              )
             )
           )
         );
@@ -332,7 +341,7 @@ function VarianteFibro({ v, grupo, descPct, pct, fmt, color, onAgregar }) {
   );
 }
 
-function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false }) {
+function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false, compartirSel={}, toggleCompartir=null }) {
   const color = MODOS[modo]?.color || "#333";
   const dc = MAT_COLORS[grupo.material] || "#888";
   const ps = (grupo.material==="Barro"||grupo.material==="Fibrocemento"||grupo.material==="Fibra de Vidrio"||MATERIALES_INSUMOS.includes(grupo.material))
@@ -340,16 +349,32 @@ function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false }) {
 
   return e('div', { style:{ background:"#fff", borderRadius:10, marginBottom:8,
       border:"1px solid #e8e4de", overflow:"hidden" } },
-    e('div', { style:{ padding:"9px 12px 7px", borderBottom:"1px solid #f0ede8" } },
-      e('div', { style:{ fontWeight:700, fontSize:13, color:"#2c2c2c" } }, grupo.articulo),
-      e('div', { style:{ display:"flex", gap:5, alignItems:"center", marginTop:2 } },
-        e('div', { style:{ width:6, height:6, borderRadius:"50%", background:dc } }),
-        e('span', { style:{ fontSize:10, color:"#999" } }, grupo.material + ps)
-      )
+    e('div', { style:{ padding:"9px 12px 7px", borderBottom:"1px solid #f0ede8",
+        display:"flex", justifyContent:"space-between", alignItems:"center" } },
+      e('div', null,
+        e('div', { style:{ fontWeight:700, fontSize:13, color:"#2c2c2c" } }, grupo.articulo),
+        e('div', { style:{ display:"flex", gap:5, alignItems:"center", marginTop:2 } },
+          e('div', { style:{ width:6, height:6, borderRadius:"50%", background:dc } }),
+          e('span', { style:{ fontSize:10, color:"#999" } }, grupo.material + ps)
+        )
+      ),
+      toggleCompartir && e('button', {
+        onClick:()=>{
+          const key = grupo.articulo + "||" + grupo.material;
+          const yaSelec = grupo.variantes.some(v => compartirSel[key + "||" + v.medidas]);
+          grupo.variantes.forEach(v => {
+            const k = key + "||" + v.medidas;
+            if (yaSelec && compartirSel[k]) toggleCompartir(k, grupo, v, v.precio);
+            else if (!yaSelec && !compartirSel[k]) toggleCompartir(k, grupo, v, v.precio);
+          });
+        },
+        style:{ background:"transparent", border:"1px solid #ddd", borderRadius:6,
+          padding:"3px 8px", fontSize:11, color:"#888" }
+      }, grupo.variantes.some(v => compartirSel[grupo.articulo + "||" + grupo.material + "||" + v.medidas]) ? "✓ sel." : "+ sel.")
     ),
     grupo.variantes.map((v, vi) => {
       if (grupo.material === "Fibrocemento" && v.acabados) {
-        return e(VarianteFibro, { key:vi, v, grupo, descPct, pct, fmt, color, onAgregar, adminMode });
+        return e(VarianteFibro, { key:vi, v, grupo, descPct, pct, fmt, color, onAgregar, adminMode, compartirSel, toggleCompartir });
       }
       const precioFinal = descPct > 0 ? pct(v.precio, descPct) : v.precio;
       return e('div', { key:vi, style:{ padding:"8px 12px",
@@ -377,11 +402,20 @@ function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false }) {
             ))
           )
         ),
-        e('button', {
-          onClick:()=>onAgregar(grupo, v, precioFinal),
-          style:{ padding:"5px 12px", borderRadius:8, border:`1px solid ${color}`,
-            background:"transparent", color, fontSize:12, fontWeight:600 }
-        }, "+ Agregar")
+        e('div', { style:{ display:"flex", gap:6, alignItems:"center" } },
+          toggleCompartir && e('button', {
+            onClick:()=>{ const k=`${grupo.articulo}||${grupo.material}||${v.medidas}`; toggleCompartir(k,grupo,v,precioFinal); },
+            style:{ width:28, height:28, borderRadius:6, border:"1px solid #ddd",
+              background: compartirSel[`${grupo.articulo}||${grupo.material}||${v.medidas}`] ? "#25D366" : "transparent",
+              color: compartirSel[`${grupo.articulo}||${grupo.material}||${v.medidas}`] ? "#fff" : "#aaa",
+              fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }
+          }, "✓"),
+          e('button', {
+            onClick:()=>onAgregar(grupo, v, precioFinal),
+            style:{ padding:"5px 12px", borderRadius:8, border:`1px solid ${color}`,
+              background:"transparent", color, fontSize:12, fontWeight:600 }
+          }, "+ Agregar")
+        )
       );
     })
   );
@@ -390,9 +424,9 @@ function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false }) {
 // ─────────────────────────────────────────────
 // MODO MINORISTA
 // ─────────────────────────────────────────────
-function ModoMinorista({ productos, onVolver, adminMode }) {
+function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
   const color = MODOS.minorista.color;
-  const [buscar, setBuscar] = useState("");
+  const [buscar, setBuscar] = useState(buscarInicial);
   const [material, setMaterial] = useState("Todos");
   const [pintada, setPintada] = useState("Todos");
   const [descPct, setDescPct] = useState(0);
@@ -546,7 +580,7 @@ function ModoMinorista({ productos, onVolver, adminMode }) {
 // ─────────────────────────────────────────────
 // PRESUPUESTADOR COMPARTIDO (Mayorista + Clientes)
 // ─────────────────────────────────────────────
-function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode }) {
+function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, buscarInicial="" }) {
   const cfg = MODOS[modo];
   const color = cfg.color;
   const descOpciones = modo==="mayorista" ? DESCUENTOS_MAY : [0,5,10,15,20];
@@ -554,7 +588,34 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode })
 
   const b = loadLS(storageKey) || {};
   const [vista, setVista] = useState("catalogo");
-  const [buscar, setBuscar] = useState("");
+  const [buscar, setBuscar] = useState(buscarInicial||"");
+  const [compartirSel, setCompartirSel] = useState({});
+  const toggleCompartir = (key, grupo, v, precio) => {
+    setCompartirSel(prev => {
+      if (prev[key]) { const {[key]:_, ...rest} = prev; return rest; }
+      return {...prev, [key]: {articulo: v.articulo||grupo.articulo, medidas: v.medidas, material: grupo.material, precio}};
+    });
+  };
+  const compartirCount = Object.keys(compartirSel).length;
+  const enviarCompartir = () => {
+    const items = Object.values(compartirSel);
+    const modo_url = modo === "mayorista" ? "mayorista" : "clientes";
+    // Group by articulo
+    const grupos = {};
+    items.forEach(i => {
+      const k = i.articulo + "||" + i.material;
+      if (!grupos[k]) grupos[k] = {articulo: i.articulo, material: i.material, items: []};
+      grupos[k].items.push(i);
+    });
+    let txt = "🌿 *LyL Macetas*\n\n";
+    Object.values(grupos).forEach(g => {
+      txt += `*${g.articulo}* · ${g.material}\n`;
+      g.items.forEach(i => { txt += `  ▫️ ${i.medidas} — $${Math.round(i.precio).toLocaleString("es-AR")}\n`; });
+      txt += `🔗 lylmacetas-glitch.github.io/lyl-app?modo=${modo_url}&buscar=${encodeURIComponent(g.articulo.toLowerCase())}\n\n`;
+    });
+    txt += "_Precios de contado. Con tarjeta según condiciones del banco._";
+    window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank");
+  };
   const [material, setMaterial] = useState("Todos");
   const [pintada, setPintada] = useState("Todos");
   const [precioMin, setPrecioMin] = useState("");
@@ -708,7 +769,22 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode })
     e('div', { style:{ padding:"0 14px 80px" } },
       grupos.length===0
         ?e('div',{style:{textAlign:"center",color:"#aaa",padding:40}},"Sin resultados")
-        :grupos.map((g,i)=>e(ProductoCard,{key:i,grupo:g,onAgregar:agregar,descPct:0,modo,adminMode}))
+        :grupos.map((g,i)=>e(ProductoCard,{key:i,grupo:g,onAgregar:agregar,descPct:0,modo,adminMode,
+            compartirSel,toggleCompartir})),
+      e('div', { style:{ height:80 } }),
+      compartirCount > 0 && e('div', { style:{
+          position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)",
+          zIndex:100, display:"flex", gap:8 } },
+        e('button', { onClick:enviarCompartir, style:{
+            padding:"12px 20px", borderRadius:30, border:"none",
+            background:"#25D366", color:"#fff", fontSize:13, fontWeight:700,
+            boxShadow:"0 4px 16px rgba(0,0,0,0.2)", whiteSpace:"nowrap" } },
+          `📤 Compartir (${compartirCount})`),
+        e('button', { onClick:()=>setCompartirSel({}), style:{
+            padding:"12px 14px", borderRadius:30, border:"none",
+            background:"#fff", color:"#888", fontSize:13, fontWeight:700,
+            boxShadow:"0 4px 16px rgba(0,0,0,0.15)" } }, "✕")
+      )
     )
   );
 
@@ -982,6 +1058,9 @@ function App() {
     const p = new URLSearchParams(window.location.search).get("modo");
     return ["minorista","mayorista","clientes"].includes(p) ? p : "selector";
   },[]);
+  const buscarUrl = useMemo(()=>{
+    return new URLSearchParams(window.location.search).get("buscar") || "";
+  },[]);
   // Si entró por link directo, ocultar botón volver al selector
   const linkDirecto = modoUrl !== "selector";
   const [pantalla, setPantalla] = useState(modoUrl);
@@ -1016,11 +1095,11 @@ function App() {
   if(pantalla==="admin")
     return e(PanelAdmin,{productos:productosAdmin,onVolver:()=>{setAdminMode(false);setPantalla("selector");}});
   if(pantalla==="minorista")
-    return e(ModoMinorista,{productos:productosMin,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode});
+    return e(ModoMinorista,{productos:productosMin,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode,buscarInicial:buscarUrl});
   if(pantalla==="mayorista")
-    return e(Presupuestador,{modo:"mayorista",productos:productosMay,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode});
+    return e(Presupuestador,{modo:"mayorista",productos:productosMay,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode,buscarInicial:buscarUrl});
   if(pantalla==="clientes")
-    return e(Presupuestador,{modo:"clientes",productos:productosMin,descFijo:descCliente,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode});
+    return e(Presupuestador,{modo:"clientes",productos:productosMin,descFijo:descCliente,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode,buscarInicial:buscarUrl});
   return null;
 }
 
