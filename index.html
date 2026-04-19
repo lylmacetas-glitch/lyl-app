@@ -335,7 +335,7 @@ function VarianteFibro({ v, grupo, descPct, pct, fmt, color, onAgregar }) {
 function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false }) {
   const color = MODOS[modo]?.color || "#333";
   const dc = MAT_COLORS[grupo.material] || "#888";
-  const ps = (grupo.material==="Barro"||grupo.material==="Fibrocemento"||MATERIALES_INSUMOS.includes(grupo.material))
+  const ps = (grupo.material==="Barro"||grupo.material==="Fibrocemento"||grupo.material==="Fibra de Vidrio"||MATERIALES_INSUMOS.includes(grupo.material))
     ? "" : grupo.pintada ? " · pintada" : " · sin pintar";
 
   return e('div', { style:{ background:"#fff", borderRadius:10, marginBottom:8,
@@ -417,7 +417,7 @@ function ModoMinorista({ productos, onVolver, adminMode }) {
       const tokens = b.split(/\s+/).filter(Boolean);
       const texto = (p.articulo + " " + p.medidas).toLowerCase();
       const inBuscar = !b || tokens.every(t => texto.includes(t));
-      const inPint = p.material==="Fibrocemento" || pintada==="Todos"||(pintada==="Pintada"&&p.pintada)||(pintada==="Sin pintar"&&!p.pintada);
+      const inPint = (p.material==="Fibrocemento"||p.material==="Fibra de Vidrio") || pintada==="Todos"||(pintada==="Pintada"&&p.pintada)||(pintada==="Sin pintar"&&!p.pintada);
       const pMin = precioMin ? p.precio >= parseFloat(precioMin) : true;
       const pMax = precioMax ? p.precio <= parseFloat(precioMax) : true;
       return inMat && inBuscar && inPint && pMin && pMax;
@@ -605,7 +605,7 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode })
     const filtrados=productos.filter(p=>{
       const inMat=material==="Todos"||p.material===material;
       const inB=!b2||p.articulo.toLowerCase().includes(b2)||p.medidas.toLowerCase().includes(b2);
-      const inP=p.material==="Fibrocemento"||pintada==="Todos"||(pintada==="Pintada"&&p.pintada)||(pintada==="Sin pintar"&&!p.pintada);
+      const inP=(p.material==="Fibrocemento"||p.material==="Fibra de Vidrio")||pintada==="Todos"||(pintada==="Pintada"&&p.pintada)||(pintada==="Sin pintar"&&!p.pintada);
       const pMin=precioMin?p.precio>=parseFloat(precioMin):true;
       const pMax=precioMax?p.precio<=parseFloat(precioMax):true;
       return inMat&&inB&&inP&&pMin&&pMax;
