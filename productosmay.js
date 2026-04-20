@@ -252,18 +252,18 @@ window.LYL_MAY = [
   { articulo: "JARDINERA 80x20x30", medidas: "80x20x30", material: "Rotomoldeado", pintada: false, precio: 93400 },
 
   // ROTOMOLDEADO — RAYUM Andina (actualizado)
-  { articulo: "ANDINA N27 RUSTICA", medidas: "", material: "Rotomoldeado", pintada: false, precio: 20100 },
-  { articulo: "ANDINA N40 RUSTICA", medidas: "", material: "Rotomoldeado", pintada: false, precio: 43800 },
-  { articulo: "ANDINA N50 RUSTICA", medidas: "", material: "Rotomoldeado", pintada: false, precio: 74800 },
-  { articulo: "ANDINA N65 RUSTICA", medidas: "", material: "Rotomoldeado", pintada: false, precio: 148300 },
-  { articulo: "ANDINA N80 RUSTICA", medidas: "", material: "Rotomoldeado", pintada: false, precio: 236600 },
-  { articulo: "ANDINA N40 LISO", medidas: "", material: "Rotomoldeado", pintada: false, precio: 38100 },
-  { articulo: "ANDINA N50 LISO", medidas: "", material: "Rotomoldeado", pintada: false, precio: 65000 },
-  { articulo: "ANDINA N65 LISO", medidas: "", material: "Rotomoldeado", pintada: false, precio: 128900 },
-  { articulo: "ANDINA N80 LISO", medidas: "", material: "Rotomoldeado", pintada: false, precio: 205700 },
-  { articulo: "JARDINERA RAYUM", medidas: "40x20x30", material: "Rotomoldeado", pintada: false, precio: 35800 },
-  { articulo: "JARDINERA RAYUM", medidas: "60x20x30", material: "Rotomoldeado", pintada: false, precio: 67100 },
-  { articulo: "JARDINERA RAYUM", medidas: "80x20x30", material: "Rotomoldeado", pintada: false, precio: 93400 },
+  { articulo: "ANDINA N27 RUSTICA", medidas: "", material: "Rotomoldeado", pintada: false, precio: 22800 },
+  { articulo: "ANDINA N40 RUSTICA", medidas: "", material: "Rotomoldeado", pintada: false, precio: 49700 },
+  { articulo: "ANDINA N50 RUSTICA", medidas: "", material: "Rotomoldeado", pintada: false, precio: 84800 },
+  { articulo: "ANDINA N65 RUSTICA", medidas: "", material: "Rotomoldeado", pintada: false, precio: 168100 },
+  { articulo: "ANDINA N80 RUSTICA", medidas: "", material: "Rotomoldeado", pintada: false, precio: 268300 },
+  { articulo: "ANDINA N40 LISO", medidas: "", material: "Rotomoldeado", pintada: false, precio: 41900 },
+  { articulo: "ANDINA N50 LISO", medidas: "", material: "Rotomoldeado", pintada: false, precio: 71500 },
+  { articulo: "ANDINA N65 LISO", medidas: "", material: "Rotomoldeado", pintada: false, precio: 141800 },
+  { articulo: "ANDINA N80 LISO", medidas: "", material: "Rotomoldeado", pintada: false, precio: 226300 },
+  { articulo: "JARDINERA RAYUM", medidas: "40x20x30", material: "Rotomoldeado", pintada: false, precio: 39400 },
+  { articulo: "JARDINERA RAYUM", medidas: "60x20x30", material: "Rotomoldeado", pintada: false, precio: 73800 },
+  { articulo: "JARDINERA RAYUM", medidas: "80x20x30", material: "Rotomoldeado", pintada: false, precio: 102700 },
 
   { articulo: "Van Gogh", medidas: "", material: "Rotomoldeado", pintada: false, precio: 19900 },
 
@@ -409,6 +409,9 @@ window.LYL_MAY = [
   { articulo: "Plato", medidas: "45cm", material: "Fibrocemento", acabados: "cruda_pint", precio: 7500, may_cruda: 7500, may_pint: 13500 },
   { articulo: "Plato", medidas: "50cm", material: "Fibrocemento", acabados: "cruda_pint", precio: 9200, may_cruda: 9200, may_pint: 16500 },
   { articulo: "Buda (cabeza)", medidas: "45cmx30cm", material: "Fibrocemento", acabados: "cruda", precio: 25200, may_cruda: 25200 },
+
+
+
 
   // ── FIBRA DE VIDRIO ──
   { articulo: "Cilindro FV", medidas: "28×18", material: "Fibra de Vidrio", pintada: false, precio: 57000 },
