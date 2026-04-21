@@ -455,7 +455,13 @@ function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
   const [nombre, setNombre] = useState("");
   const [nota, setNota] = useState("");
   const [direccion, setDireccion] = useState("");
-  const [vista, setVista] = useState("catalogo");
+  const [vista, setVista] = useState(()=> presupuestoInicial?.items?.length ? "presupuesto" : "catalogo");
+  React.useEffect(()=>{
+    if (presupuestoInicial && onPresupuestoInicial) {
+      if (presupuestoInicial.descuento_pct) setDescuento(String(presupuestoInicial.descuento_pct));
+      onPresupuestoInicial();
+    }
+  },[]);
   const [enviado, setEnviado] = useState(false);
 
   const totalItems = Object.values(carrito).reduce((s,v)=>s+v.cantidad,0);
@@ -609,14 +615,20 @@ function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
 // ─────────────────────────────────────────────
 // PRESUPUESTADOR COMPARTIDO (Mayorista + Clientes)
 // ─────────────────────────────────────────────
-function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, buscarInicial="" }) {
+function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, buscarInicial="", presupuestoInicial=null, onPresupuestoInicial=null }) {
   const cfg = MODOS[modo];
   const color = cfg.color;
   const descOpciones = modo==="mayorista" ? DESCUENTOS_MAY : [0,5,10,15,20];
   const storageKey = modo==="mayorista" ? STORAGE_KEY_MAY : STORAGE_KEY_CLI;
 
   const b = loadLS(storageKey) || {};
-  const [vista, setVista] = useState("catalogo");
+  const [vista, setVista] = useState(()=> presupuestoInicial?.items?.length ? "presupuesto" : "catalogo");
+  React.useEffect(()=>{
+    if (presupuestoInicial && onPresupuestoInicial) {
+      if (presupuestoInicial.descuento_pct) setDescuento(String(presupuestoInicial.descuento_pct));
+      onPresupuestoInicial();
+    }
+  },[]);
   const [buscar, setBuscar] = useState(buscarInicial||"");
   const [compartirSel, setCompartirSel] = useState({});
   const toggleCompartir = (key, grupo, v, precio) => {
@@ -649,9 +661,16 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
   const [pintada, setPintada] = useState("Todos");
   const [precioMin, setPrecioMin] = useState("");
   const [precioMax, setPrecioMax] = useState("");
-  const [presupuesto, setPresupuesto] = useState(b.presupuesto||[]);
-  const [cliente, setCliente] = useState(b.cliente||"");
-  const [proyecto, setProyecto] = useState(b.proyecto||"");
+  const [presupuesto, setPresupuesto] = useState(()=>{
+    if (presupuestoInicial?.items?.length) {
+      return presupuestoInicial.items.map((i,idx)=>({
+        ...i, key:`rec_${idx}`, cantidad:i.cantidad||1, nota:"", sinDesc:false
+      }));
+    }
+    return b.presupuesto||[];
+  });
+  const [cliente, setCliente] = useState(presupuestoInicial?.cliente||b.cliente||"");
+  const [proyecto, setProyecto] = useState(presupuestoInicial?.proyecto||b.proyecto||"");
   const [envio, setEnvio] = useState(b.envio||"");
   const [descuento, setDescuento] = useState(b.descuento ?? (descFijo!==null?descFijo:0));
   const [mostrarAnticipo, setMostrarAnticipo] = useState(b.mostrarAnticipo??true);
@@ -1097,71 +1116,92 @@ function PanelAdmin({ productos, onVolver }) {
 // ─────────────────────────────────────────────
 // PANEL REGISTRO Y ESTADÍSTICAS
 // ─────────────────────────────────────────────
-function PanelRegistro({ onVolver }) {
+function PanelRegistro({ onVolver, onRecuperar }) {
   const { useState, useEffect, useMemo } = React;
   const [registros, setRegistros] = useState([]);
-  const [tab, setTab] = useState("lista"); // lista | stats
+  const [tab, setTab] = useState("lista");
   const [filtroEstado, setFiltroEstado] = useState("todos");
-  const fmt = v => "$ " + Math.round(v||0).toLocaleString("es-AR");
+  const [filtroTipo, setFiltroTipo] = useState("todos");
+  const [expandido, setExpandido] = useState(null);
+  const fmt = v => "$ " + Math.round(v||0).toLocaleString("es-AR");
 
   useEffect(() => { setRegistros(loadRegistro()); }, []);
 
   const cambiarEstado = (id, estado) => {
     const nuevo = registros.map(r => r.id===id ? {...r, estado} : r);
-    setRegistros(nuevo);
-    saveRegistro(nuevo);
+    setRegistros(nuevo); saveRegistro(nuevo);
   };
 
   const eliminar = (id) => {
     if (!confirm("¿Eliminar este registro?")) return;
     const nuevo = registros.filter(r => r.id !== id);
-    setRegistros(nuevo);
-    saveRegistro(nuevo);
+    setRegistros(nuevo); saveRegistro(nuevo);
+  };
+
+  const recuperar = (r) => {
+    if (!confirm(`¿Recuperar el presupuesto de ${r.cliente || "este cliente"} en el presupuestador?`)) return;
+    onRecuperar(r);
   };
 
   const exportar = () => {
     const blob = new Blob([JSON.stringify(registros, null, 2)], {type:"application/json"});
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "lyl_registro.json";
-    a.click();
+    a.href = URL.createObjectURL(blob); a.download = "lyl_registro.json"; a.click();
   };
 
-  const filtrados = filtroEstado === "todos" ? registros : registros.filter(r => r.estado === filtroEstado);
+  const tipoLabel = { mayorista:"📦 May", clientes:"⭐ Cli", minorista:"🌿 Min" };
+  const tipoColor = { mayorista:"#2c5f7a", clientes:"#8b5e3c", minorista:"#4a7c59" };
+  const estadoColor = { enviado:"#e07b39", aprobado:"#2d6a4a", rechazado:"#c0392b" };
+  const estadoLabel = { enviado:"Enviado", aprobado:"Aprobado", rechazado:"Rechazado" };
 
-  // Stats
+  const filtrados = useMemo(() => registros.filter(r => {
+    const okEstado = filtroEstado === "todos" || r.estado === filtroEstado;
+    const okTipo = filtroTipo === "todos" || r.tipo === filtroTipo;
+    return okEstado && okTipo;
+  }), [registros, filtroEstado, filtroTipo]);
+
   const stats = useMemo(() => {
     const aprobados = registros.filter(r => r.estado === "aprobado");
+    const enviados = registros.filter(r => r.estado === "enviado");
+    const rechazados = registros.filter(r => r.estado === "rechazado");
     const totalVendido = aprobados.reduce((s,r) => s + (r.total||0), 0);
     const tasaAprobacion = registros.length > 0 ? Math.round(aprobados.length / registros.length * 100) : 0;
+    const ticketPromedio = aprobados.length > 0 ? Math.round(totalVendido / aprobados.length) : 0;
+
+    // Por tipo
+    const porTipo = {
+      mayorista: aprobados.filter(r=>r.tipo==="mayorista").reduce((s,r)=>s+(r.total||0),0),
+      clientes:  aprobados.filter(r=>r.tipo==="clientes").reduce((s,r)=>s+(r.total||0),0),
+      minorista: aprobados.filter(r=>r.tipo==="minorista").reduce((s,r)=>s+(r.total||0),0),
+    };
 
     // Productos más pedidos (aprobados)
     const prodMap = {};
     aprobados.forEach(r => {
       (r.items||[]).forEach(i => {
         const k = i.articulo + (i.medidas ? " " + i.medidas : "");
-        if (!prodMap[k]) prodMap[k] = {nombre:k, cantidad:0, total:0};
+        if (!prodMap[k]) prodMap[k] = {nombre:k, cantidad:0, total:0, material:i.material||""};
         prodMap[k].cantidad += i.cantidad||1;
         prodMap[k].total += (i.precio||0) * (i.cantidad||1);
       });
     });
-    const topProductos = Object.values(prodMap).sort((a,b) => b.cantidad-a.cantidad).slice(0,10);
+    const topProductos = Object.values(prodMap).sort((a,b) => b.cantidad-a.cantidad).slice(0,8);
 
     // Por mes
     const mesesMap = {};
     aprobados.forEach(r => {
-      const mes = r.fecha ? r.fecha.slice(3) : "Sin fecha";
+      const mes = r.fecha ? r.fecha.slice(3) : "S/F";
       if (!mesesMap[mes]) mesesMap[mes] = {mes, total:0, cant:0};
       mesesMap[mes].total += r.total||0;
       mesesMap[mes].cant += 1;
     });
     const porMes = Object.values(mesesMap).sort((a,b) => a.mes.localeCompare(b.mes));
+    const maxMes = porMes.length > 0 ? Math.max(...porMes.map(m=>m.total)) : 1;
 
-    return { totalVendido, tasaAprobacion, aprobados: aprobados.length, topProductos, porMes };
+    return { totalVendido, tasaAprobacion, ticketPromedio,
+      aprobados:aprobados.length, enviados:enviados.length, rechazados:rechazados.length,
+      porTipo, topProductos, porMes, maxMes };
   }, [registros]);
-
-  const estadoColor = { enviado:"#e07b39", aprobado:"#2d6a4a", rechazado:"#c0392b" };
-  const estadoLabel = { enviado:"Enviado", aprobado:"Aprobado", rechazado:"Rechazado" };
 
   return e("div", { style:{ maxWidth:480, margin:"0 auto", minHeight:"100vh", background:"#f8f6f2" } },
     // Header
@@ -1184,113 +1224,217 @@ function PanelRegistro({ onVolver }) {
       )
     ),
 
+    // ── LISTA ──
     tab === "lista" && e("div", null,
-      // Filtro estado
-      e("div", { style:{ padding:"8px 12px", overflowX:"auto", whiteSpace:"nowrap", background:"#fff", borderBottom:"1px solid #f0ede8" } },
-        ["todos","enviado","aprobado","rechazado"].map(est =>
-          e("button", { key:est, onClick:()=>setFiltroEstado(est), style:{
-            display:"inline-block", marginRight:6, padding:"4px 12px", borderRadius:20,
-            border:`1px solid ${filtroEstado===est ? "#333" : "#ddd"}`,
-            background: filtroEstado===est ? "#333" : "transparent",
-            color: filtroEstado===est ? "#fff" : "#666", fontSize:11
-          }}, est === "todos" ? "Todos" : estadoLabel[est])
+      // Filtros
+      e("div", { style:{ padding:"8px 12px", background:"#fff", borderBottom:"1px solid #f0ede8" } },
+        e("div", { style:{ display:"flex", gap:5, marginBottom:6, overflowX:"auto", whiteSpace:"nowrap" } },
+          ["todos","enviado","aprobado","rechazado"].map(est =>
+            e("button", { key:est, onClick:()=>setFiltroEstado(est), style:{
+              display:"inline-block", padding:"3px 10px", borderRadius:20, fontSize:11,
+              border:`1px solid ${filtroEstado===est ? "#333":"#ddd"}`,
+              background: filtroEstado===est ? "#333":"transparent",
+              color: filtroEstado===est ? "#fff":"#666"
+            }}, est==="todos"?"Todos":estadoLabel[est])
+          )
+        ),
+        e("div", { style:{ display:"flex", gap:5, overflowX:"auto", whiteSpace:"nowrap" } },
+          ["todos","mayorista","clientes","minorista"].map(t =>
+            e("button", { key:t, onClick:()=>setFiltroTipo(t), style:{
+              display:"inline-block", padding:"3px 10px", borderRadius:20, fontSize:11,
+              border:`1px solid ${filtroTipo===t ? (tipoColor[t]||"#333"):"#ddd"}`,
+              background: filtroTipo===t ? (tipoColor[t]||"#333"):"transparent",
+              color: filtroTipo===t ? "#fff":"#666"
+            }}, t==="todos"?"Todos":tipoLabel[t]||t)
+          )
         )
       ),
+
       filtrados.length === 0
         ? e("div", { style:{ textAlign:"center", padding:40, color:"#aaa" } }, "Sin registros")
-        : filtrados.map(r =>
-            e("div", { key:r.id, style:{ margin:"10px 12px 0", background:"#fff", borderRadius:12, border:"1px solid #e8e4de", overflow:"hidden" } },
-              e("div", { style:{ padding:"10px 12px", borderBottom:"1px solid #f5f5f5" } },
+        : filtrados.map(r => {
+            const exp = expandido === r.id;
+            return e("div", { key:r.id, style:{ margin:"10px 12px 0", background:"#fff", borderRadius:12, border:"1px solid #e8e4de", overflow:"hidden" } },
+              // Cabecera
+              e("div", { onClick:()=>setExpandido(exp?null:r.id), style:{ padding:"10px 12px", cursor:"pointer" } },
                 e("div", { style:{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" } },
-                  e("div", null,
-                    e("div", { style:{ fontSize:13, fontWeight:700, color:"#333" } }, r.cliente || "Sin nombre"),
-                    r.numero && e("div", { style:{ fontSize:10, color:"#aaa" } }, "Presupuesto " + r.numero),
-                    r.proyecto && e("div", { style:{ fontSize:11, color:"#666", marginTop:2 } }, r.proyecto),
-                    e("div", { style:{ fontSize:11, color:"#aaa", marginTop:2 } }, r.fecha + " · " + (r.tipo||""))
+                  e("div", { style:{ flex:1 } },
+                    e("div", { style:{ display:"flex", alignItems:"center", gap:6 } },
+                      e("span", { style:{ fontSize:10, padding:"2px 7px", borderRadius:10, fontWeight:700,
+                          background:(tipoColor[r.tipo]||"#888")+"22", color:tipoColor[r.tipo]||"#888" } },
+                        tipoLabel[r.tipo]||r.tipo),
+                      r.numero && e("span", { style:{ fontSize:10, color:"#aaa" } }, r.numero)
+                    ),
+                    e("div", { style:{ fontSize:13, fontWeight:700, color:"#333", marginTop:3 } }, r.cliente||"Sin nombre"),
+                    r.proyecto && e("div", { style:{ fontSize:11, color:"#666" } }, r.proyecto),
+                    e("div", { style:{ fontSize:10, color:"#aaa" } }, r.fecha)
                   ),
                   e("div", { style:{ textAlign:"right" } },
                     e("div", { style:{ fontSize:14, fontWeight:700, color:"#2d5a3d" } }, fmt(r.total)),
                     e("div", { style:{ fontSize:10, marginTop:4, padding:"2px 8px", borderRadius:10,
-                        background: estadoColor[r.estado]+"22", color: estadoColor[r.estado], fontWeight:600 } },
-                      estadoLabel[r.estado])
+                        background:estadoColor[r.estado]+"22", color:estadoColor[r.estado], fontWeight:600 } },
+                      estadoLabel[r.estado]||r.estado),
+                    e("div", { style:{ fontSize:12, color:"#aaa", marginTop:4 } }, exp ? "▲" : "▼")
                   )
                 ),
-                // Items
-                e("div", { style:{ marginTop:6, fontSize:10, color:"#888" } },
+                !exp && e("div", { style:{ fontSize:10, color:"#aaa", marginTop:4 } },
                   (r.items||[]).slice(0,3).map((i,idx) =>
                     e("span", { key:idx }, (idx>0?", ":"") + i.articulo + " ×" + (i.cantidad||1))
                   ),
-                  (r.items||[]).length > 3 && e("span", null, " +" + ((r.items.length-3)) + " más")
+                  (r.items||[]).length > 3 && e("span", null, " +" + (r.items.length-3) + " más")
                 )
               ),
+
+              // Detalle expandido
+              exp && e("div", { style:{ borderTop:"1px solid #f5f5f5", padding:"8px 12px" } },
+                e("div", { style:{ fontSize:11, color:"#555", marginBottom:6, fontWeight:600 } }, "Detalle:"),
+                (r.items||[]).map((i,idx) =>
+                  e("div", { key:idx, style:{ display:"flex", justifyContent:"space-between", fontSize:11, padding:"3px 0", borderBottom:"1px solid #f8f8f8" } },
+                    e("span", { style:{ color:"#333" } }, i.articulo + (i.medidas?" "+i.medidas:"") + " ×" + (i.cantidad||1)),
+                    e("span", { style:{ color:"#2d5a3d", fontWeight:600 } }, fmt((i.precio||0)*(i.cantidad||1)))
+                  )
+                ),
+                r.descuento_pct > 0 && e("div", { style:{ fontSize:11, color:"#e07b39", marginTop:4 } },
+                  "Descuento " + r.descuento_pct + "%: −" + fmt(r.descuento_monto)
+                )
+              ),
+
               // Cambiar estado
-              e("div", { style:{ display:"flex", gap:0 } },
+              e("div", { style:{ display:"flex", borderTop:"1px solid #f0ede8" } },
                 ["enviado","aprobado","rechazado"].map((est,i) =>
                   e("button", { key:est, onClick:()=>cambiarEstado(r.id, est), style:{
                     flex:1, padding:"7px 0", border:"none", fontSize:11, fontWeight: r.estado===est ? 700 : 400,
-                    borderTop:"1px solid #f0ede8",
-                    borderRight: i<2 ? "1px solid #f0ede8" : "none",
-                    background: r.estado===est ? estadoColor[est]+"22" : "transparent",
-                    color: r.estado===est ? estadoColor[est] : "#aaa"
+                    borderRight: i<2 ? "1px solid #f0ede8":"none",
+                    background: r.estado===est ? estadoColor[est]+"22":"transparent",
+                    color: r.estado===est ? estadoColor[est]:"#aaa"
                   }}, estadoLabel[est])
                 )
+              ),
+
+              // Acciones
+              exp && e("div", { style:{ display:"flex", gap:8, padding:"8px 12px", borderTop:"1px solid #f5f5f5" } },
+                (r.tipo==="mayorista"||r.tipo==="clientes") && e("button", {
+                  onClick:()=>recuperar(r),
+                  style:{ flex:1, padding:"7px 0", borderRadius:8, border:"1px solid #2c5f7a",
+                    background:"transparent", color:"#2c5f7a", fontSize:12, fontWeight:600 }
+                }, "✏️ Recuperar y editar"),
+                e("button", {
+                  onClick:()=>eliminar(r.id),
+                  style:{ padding:"7px 14px", borderRadius:8, border:"1px solid #ddd",
+                    background:"transparent", color:"#c0392b", fontSize:12 }
+                }, "🗑 Eliminar")
               )
-            )
-          ),
+            );
+          }),
       e("div", { style:{ height:20 } })
     ),
 
+    // ── ESTADÍSTICAS ──
     tab === "stats" && e("div", { style:{ padding:"12px 14px" } },
+
       // Cards resumen
       e("div", { style:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:12 } },
-        e("div", { style:{ background:"#fff", borderRadius:10, padding:"12px", border:"1px solid #e8e4de" } },
-          e("div", { style:{ fontSize:11, color:"#888", marginBottom:4 } }, "Total vendido"),
-          e("div", { style:{ fontSize:16, fontWeight:700, color:"#2d5a3d" } }, fmt(stats.totalVendido))
-        ),
-        e("div", { style:{ background:"#fff", borderRadius:10, padding:"12px", border:"1px solid #e8e4de" } },
-          e("div", { style:{ fontSize:11, color:"#888", marginBottom:4 } }, "Tasa aprobación"),
-          e("div", { style:{ fontSize:16, fontWeight:700, color:"#2c5f7a" } }, stats.tasaAprobacion + "%")
-        ),
-        e("div", { style:{ background:"#fff", borderRadius:10, padding:"12px", border:"1px solid #e8e4de" } },
-          e("div", { style:{ fontSize:11, color:"#888", marginBottom:4 } }, "Aprobados"),
-          e("div", { style:{ fontSize:16, fontWeight:700, color:"#2d6a4a" } }, stats.aprobados)
-        ),
-        e("div", { style:{ background:"#fff", borderRadius:10, padding:"12px", border:"1px solid #e8e4de" } },
-          e("div", { style:{ fontSize:11, color:"#888", marginBottom:4 } }, "Total enviados"),
-          e("div", { style:{ fontSize:16, fontWeight:700, color:"#333" } }, registros.length)
+        [
+          { label:"Total vendido", value:fmt(stats.totalVendido), color:"#2d5a3d" },
+          { label:"Ticket promedio", value:fmt(stats.ticketPromedio), color:"#2c5f7a" },
+          { label:"Tasa aprobación", value:stats.tasaAprobacion+"%", color:"#e07b39" },
+          { label:"Total registros", value:registros.length, color:"#333" },
+        ].map(card =>
+          e("div", { key:card.label, style:{ background:"#fff", borderRadius:10, padding:"12px", border:"1px solid #e8e4de" } },
+            e("div", { style:{ fontSize:11, color:"#888", marginBottom:4 } }, card.label),
+            e("div", { style:{ fontSize:16, fontWeight:700, color:card.color } }, card.value)
+          )
         )
       ),
 
-      // Por mes
-      stats.porMes.length > 0 && e("div", { style:{ background:"#fff", borderRadius:10, padding:"12px", border:"1px solid #e8e4de", marginBottom:10 } },
-        e("div", { style:{ fontSize:12, fontWeight:700, color:"#333", marginBottom:8 } }, "Ventas por mes"),
-        stats.porMes.map(m =>
-          e("div", { key:m.mes, style:{ display:"flex", justifyContent:"space-between", fontSize:12, padding:"4px 0", borderBottom:"1px solid #f5f5f5" } },
-            e("span", { style:{ color:"#555" } }, m.mes),
-            e("span", null,
-              e("span", { style:{ color:"#2d5a3d", fontWeight:700, marginRight:8 } }, fmt(m.total)),
-              e("span", { style:{ color:"#aaa" } }, m.cant + " presup.")
+      // Torta estados
+      e("div", { style:{ background:"#fff", borderRadius:10, padding:"14px", border:"1px solid #e8e4de", marginBottom:10 } },
+        e("div", { style:{ fontSize:12, fontWeight:700, color:"#333", marginBottom:10 } }, "Estados"),
+        e("div", { style:{ display:"flex", gap:8, alignItems:"center" } },
+          // Barra proporcional
+          e("div", { style:{ flex:1, height:24, borderRadius:12, overflow:"hidden", display:"flex" } },
+            registros.length === 0
+              ? e("div", { style:{ flex:1, background:"#f0ede8" } })
+              : [
+                  { est:"aprobado", count:stats.aprobados, color:"#2d6a4a" },
+                  { est:"enviado", count:stats.enviados, color:"#e07b39" },
+                  { est:"rechazado", count:stats.rechazados, color:"#c0392b" },
+                ].filter(s=>s.count>0).map(s =>
+                  e("div", { key:s.est, style:{ flex:s.count, background:s.color, transition:"flex .3s" } })
+                )
+          ),
+          e("div", { style:{ fontSize:11, color:"#aaa", minWidth:30, textAlign:"right" } }, registros.length + " total")
+        ),
+        e("div", { style:{ display:"flex", gap:12, marginTop:8 } },
+          [
+            { label:"Aprobados", count:stats.aprobados, color:"#2d6a4a" },
+            { label:"Enviados", count:stats.enviados, color:"#e07b39" },
+            { label:"Rechazados", count:stats.rechazados, color:"#c0392b" },
+          ].map(s =>
+            e("div", { key:s.label, style:{ display:"flex", alignItems:"center", gap:4, fontSize:11 } },
+              e("div", { style:{ width:10, height:10, borderRadius:"50%", background:s.color } }),
+              e("span", { style:{ color:"#555" } }, s.label + ": "),
+              e("span", { style:{ fontWeight:700, color:s.color } }, s.count)
+            )
+          )
+        )
+      ),
+
+      // Por canal
+      stats.totalVendido > 0 && e("div", { style:{ background:"#fff", borderRadius:10, padding:"14px", border:"1px solid #e8e4de", marginBottom:10 } },
+        e("div", { style:{ fontSize:12, fontWeight:700, color:"#333", marginBottom:10 } }, "Ventas por canal"),
+        ["mayorista","clientes","minorista"].filter(t => stats.porTipo[t] > 0).map(t =>
+          e("div", { key:t, style:{ marginBottom:8 } },
+            e("div", { style:{ display:"flex", justifyContent:"space-between", fontSize:11, marginBottom:3 } },
+              e("span", { style:{ color:"#555" } }, tipoLabel[t]||t),
+              e("span", { style:{ fontWeight:700, color:tipoColor[t] } }, fmt(stats.porTipo[t]))
+            ),
+            e("div", { style:{ height:8, borderRadius:4, background:"#f0ede8", overflow:"hidden" } },
+              e("div", { style:{ height:"100%", borderRadius:4,
+                  width: Math.round(stats.porTipo[t]/stats.totalVendido*100)+"%",
+                  background:tipoColor[t], transition:"width .4s" } })
+            )
+          )
+        )
+      ),
+
+      // Por mes — barras
+      stats.porMes.length > 0 && e("div", { style:{ background:"#fff", borderRadius:10, padding:"14px", border:"1px solid #e8e4de", marginBottom:10 } },
+        e("div", { style:{ fontSize:12, fontWeight:700, color:"#333", marginBottom:10 } }, "Ventas por mes (aprobados)"),
+        e("div", { style:{ display:"flex", alignItems:"flex-end", gap:6, height:80 } },
+          stats.porMes.map(m =>
+            e("div", { key:m.mes, style:{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 } },
+              e("div", { style:{ fontSize:9, color:"#2d5a3d", fontWeight:700 } },
+                m.total >= 1000000 ? (m.total/1000000).toFixed(1)+"M" : m.total >= 1000 ? (m.total/1000).toFixed(0)+"K" : m.total),
+              e("div", { style:{ width:"100%", borderRadius:"3px 3px 0 0", background:"#4a7c59",
+                  height: Math.max(8, Math.round(m.total/stats.maxMes*60))+"px" } }),
+              e("div", { style:{ fontSize:9, color:"#aaa" } }, m.mes.split("/")[0])
             )
           )
         )
       ),
 
       // Top productos
-      stats.topProductos.length > 0 && e("div", { style:{ background:"#fff", borderRadius:10, padding:"12px", border:"1px solid #e8e4de" } },
-        e("div", { style:{ fontSize:12, fontWeight:700, color:"#333", marginBottom:8 } }, "Productos más vendidos"),
-        stats.topProductos.map((p,i) =>
-          e("div", { key:i, style:{ display:"flex", justifyContent:"space-between", fontSize:11, padding:"5px 0", borderBottom:"1px solid #f5f5f5" } },
-            e("div", null,
-              e("span", { style:{ color:"#aaa", marginRight:6 } }, (i+1)+"."),
-              e("span", { style:{ color:"#333" } }, p.nombre)
+      stats.topProductos.length > 0 && e("div", { style:{ background:"#fff", borderRadius:10, padding:"14px", border:"1px solid #e8e4de" } },
+        e("div", { style:{ fontSize:12, fontWeight:700, color:"#333", marginBottom:8 } }, "Productos más pedidos"),
+        stats.topProductos.map((p,i) => {
+          const maxQ = stats.topProductos[0].cantidad;
+          return e("div", { key:i, style:{ marginBottom:8 } },
+            e("div", { style:{ display:"flex", justifyContent:"space-between", fontSize:11, marginBottom:2 } },
+              e("span", { style:{ color:"#333" } }, (i+1)+". "+p.nombre),
+              e("span", { style:{ fontWeight:700, color:"#2d5a3d" } }, p.cantidad+" u.")
             ),
-            e("span", { style:{ color:"#2d5a3d", fontWeight:700 } }, p.cantidad + " u.")
-          )
-        )
+            e("div", { style:{ height:6, borderRadius:3, background:"#f0ede8", overflow:"hidden" } },
+              e("div", { style:{ height:"100%", borderRadius:3, background:"#4a7c59",
+                  width:Math.round(p.cantidad/maxQ*100)+"%", transition:"width .4s" } })
+            )
+          );
+        })
       )
     )
   );
 }
+
 
 // ─────────────────────────────────────────────
 // APP PRINCIPAL
@@ -1309,6 +1453,7 @@ function App() {
   const [pantalla, setPantalla] = useState(modoUrl);
   const [adminMode, setAdminMode] = useState(false);
   const [descCliente, setDescCliente] = useState(10);
+  const [presupuestoRecuperado, setPresupuestoRecuperado] = useState(null);
 
   // Combinar datos min y may en estructura unificada para admin
   const productosMin = useMemo(()=>(window.LYL_MIN||[]).map(enriquecerProducto),[]);
@@ -1338,7 +1483,13 @@ function App() {
   if(pantalla==="admin")
     return e(PanelAdmin,{productos:productosAdmin,onVolver:()=>{setAdminMode(false);setPantalla("selector");}});
   if(pantalla==="registro")
-    return e(PanelRegistro,{onVolver:()=>setPantalla("selector")});
+    return e(PanelRegistro,{
+      onVolver:()=>setPantalla("selector"),
+      onRecuperar:(r)=>{
+        setPresupuestoRecuperado(r);
+        setPantalla(r.tipo==="clientes"?"clientes":"mayorista");
+      }
+    });
   if(pantalla==="minorista")
     return e(ModoMinorista,{productos:productosMin,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode,buscarInicial:buscarUrl});
   if(pantalla==="mayorista")
