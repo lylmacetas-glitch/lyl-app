@@ -355,7 +355,7 @@ function VarianteFibro({ v, grupo, descPct, pct, fmt, color, onAgregar, comparti
   ].filter(Boolean);
 
   return e('div', { style:{ padding:"8px 12px", borderBottom:"1px solid #f5f3ef" } },
-    e('div', { style:{ fontSize:12, color:"#888", marginBottom:8, fontWeight:500 } }, v.medidas || "—"),
+    e('div', { style:{ fontSize:12, fontWeight:600, color:"#555", marginBottom:6, paddingBottom:4, borderBottom:"1px dashed #f0ede8" } }, v.medidas || "—"),
     e('div', { style:{ display:"flex", flexDirection:"column", gap:6 } },
       precios.map(op => {
         const precioFinal = descPct > 0 ? pct(op.precio, descPct) : op.precio;
@@ -402,26 +402,22 @@ function VarianteFibro({ v, grupo, descPct, pct, fmt, color, onAgregar, comparti
 function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false, compartirSel={}, toggleCompartir=null }) {
   const color = MODOS[modo]?.color || "#333";
   const dc = MAT_COLORS[grupo.material] || "#888";
-  const ps = "";
   const fotos = getFotos(grupo.articulo, grupo.material);
-  const fotoIdx = 0;
 
-  return e('div', { style:{ background:"#fff", borderRadius:10, marginBottom:8,
-      border:"1px solid #e8e4de", overflow:"hidden" } },
-    fotos.length > 0 && e('div', { style:{ position:"relative", background:"#f5f3ef" } },
-      e('img', { src:fotos[fotoIdx], alt:grupo.articulo,
-        style:{ width:"100%", height:180, objectFit:"cover", display:"block" },
-        onError: ev => { ev.target.style.display="none"; }
-      }),
+  return e('div', { style:{ background:"#fff", borderRadius:12, marginBottom:10,
+      border:"1px solid #e8e4de", overflow:"hidden",
+      boxShadow:"0 1px 4px rgba(0,0,0,0.06)" } },
 
-    ),
-    e('div', { style:{ padding:"9px 12px 7px", borderBottom:"1px solid #f0ede8",
-        display:"flex", justifyContent:"space-between", alignItems:"center" } },
+    // ── CABECERA DEL MODELO ──
+    e('div', { style:{ padding:"10px 12px 8px",
+        borderBottom:"1px solid #f0ede8",
+        display:"flex", justifyContent:"space-between", alignItems:"center",
+        background:"#fafaf9" } },
       e('div', null,
-        e('div', { style:{ fontWeight:700, fontSize:13, color:"#2c2c2c" } }, grupo.articulo),
-        e('div', { style:{ display:"flex", gap:5, alignItems:"center", marginTop:2 } },
-          e('div', { style:{ width:6, height:6, borderRadius:"50%", background:dc } }),
-          e('span', { style:{ fontSize:10, color:"#999" } }, grupo.material + ps)
+        e('div', { style:{ fontWeight:700, fontSize:14, color:"#1a1a1a", letterSpacing:"0.01em" } }, grupo.articulo),
+        e('div', { style:{ display:"flex", alignItems:"center", gap:5, marginTop:3 } },
+          e('div', { style:{ width:7, height:7, borderRadius:"50%", background:dc, flexShrink:0 } }),
+          e('span', { style:{ fontSize:11, color:"#888", fontWeight:500 } }, grupo.material)
         )
       ),
       toggleCompartir && e('button', {
@@ -430,87 +426,80 @@ function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false, comp
           const yaSelec = grupo.variantes.some(v => compartirSel[key + "||" + v.medidas]);
           grupo.variantes.forEach(v => {
             const k = key + "||" + v.medidas;
-            if (yaSelec && compartirSel[k]) toggleCompartir(k, grupo, v, v.precio);
-            else if (!yaSelec && !compartirSel[k]) toggleCompartir(k, grupo, v, v.precio);
+            if (yaSelec && compartirSel[k]) toggleCompartir(k, grupo, v);
+            else if (!yaSelec && !compartirSel[k]) toggleCompartir(k, grupo, v);
           });
         },
-        style:{ background:"transparent", border:"1px solid #ddd", borderRadius:6,
-          padding:"3px 8px", fontSize:11, color:"#888" }
-      }, grupo.variantes.some(v => compartirSel[grupo.articulo + "||" + grupo.material + "||" + v.medidas]) ? "✓ sel." : "+ sel.")
+        style:{ fontSize:11, padding:"3px 9px", borderRadius:8,
+          border:`1px solid ${color}`, background:"transparent",
+          color, fontWeight:600, whiteSpace:"nowrap" }
+      }, "+ sel.")
     ),
-    e('div', { style:{ display:"flex", gap:0 } },
+
+    // ── CUERPO: variantes a la izquierda, foto a la derecha ──
+    e('div', { style:{ display:"flex" } },
+
+      // Columna izquierda: variantes
       e('div', { style:{ flex:1, minWidth:0 } },
         grupo.variantes.map((v, vi) => {
-      if (grupo.material === "Fibrocemento" && v.acabados) {
-        return e(VarianteFibro, { key:vi, v, grupo, descPct, pct, fmt, color, onAgregar, adminMode, compartirSel, toggleCompartir });
-      }
-      const precioFinal = descPct > 0 ? pct(v.precio, descPct) : v.precio;
-      return e('div', { key:vi, style:{ padding:"8px 12px",
-          borderBottom: vi < grupo.variantes.length-1 ? "1px solid #f5f3ef" : "none",
-          display:"flex", justifyContent:"space-between", alignItems:"center" } },
-        e('div', null,
-          e('span', { style:{ fontSize:12, color:"#666" } }, v.medidas || "—"),
-          e('div', { style:{ display:"flex", gap:8, alignItems:"center", marginTop:2 } },
-            e('span', { style:{ fontSize:13, color, fontWeight:700 } }, fmt(precioFinal)),
-            descPct > 0 && e('span', { style:{ fontSize:10, color:"#aaa", textDecoration:"line-through" } }, fmt(v.precio)),
-            adminMode && v.costo && e('span', { style:{ fontSize:10, color:"#888",
-              background:"#f0f0f0", padding:"1px 5px", borderRadius:6, marginLeft:4 } },
-              `costo: ${fmt(v.costo)} · margen: ${Math.round((precioFinal/v.costo-1)*100)}%`
-            )
-          ),
-          grupo.material === "Rotomoldeado" && e('div', { style:{ display:"flex", gap:6, alignItems:"center", marginTop:6 } },
-            ...[
-              { color:"#f5f5f5", border:"1px solid #bbb", label:"Blanco" },
-              { color:"#1a1a1a", border:"none", label:"Negro" },
-              { color:"#7a7a7a", border:"none", label:"Gris" },
-              { color:"#c8a882", border:"none", label:"Beige" },
-            ].map(c => e('div', { key:c.label, style:{ display:"flex", flexDirection:"column", alignItems:"center", gap:2 } },
-              e('div', { style:{ width:14, height:14, borderRadius:"50%", background:c.color, border:c.border } }),
-              e('span', { style:{ fontSize:9, color:"#aaa" } }, c.label)
-            ))
-          )
-        ),
-        e('div', { style:{ display:"flex", gap:6, alignItems:"center" } },
-          toggleCompartir && e('button', {
-            onClick:()=>{ const k=`${grupo.articulo}||${grupo.material}||${v.medidas}`; toggleCompartir(k,grupo,v,precioFinal); },
-            style:{ width:28, height:28, borderRadius:6, border:"1px solid #ddd",
-              background: compartirSel[`${grupo.articulo}||${grupo.material}||${v.medidas}`] ? "#25D366" : "transparent",
-              color: compartirSel[`${grupo.articulo}||${grupo.material}||${v.medidas}`] ? "#fff" : "#aaa",
-              fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }
-          }, "✓"),
-          e('button', {
-            onClick:()=>onAgregar(grupo, v, precioFinal),
-            style:{ padding:"5px 12px", borderRadius:8, border:`1px solid ${color}`,
-              background:"transparent", color, fontSize:12, fontWeight:600 }
-          }, "+ Agregar")
-        )
-      );
-    })
+          if (grupo.material === "Fibrocemento" && v.acabados) {
+            return e(VarianteFibro, { key:vi, v, grupo, descPct, pct, fmt, color, onAgregar, adminMode });
+          }
+          const precioFinal = descPct > 0 ? pct(v.precio, descPct) : v.precio;
+          return e('div', { key:vi, style:{
+              padding:"9px 12px",
+              borderBottom: vi < grupo.variantes.length-1 ? "1px solid #f5f3ef" : "none",
+              display:"flex", justifyContent:"space-between", alignItems:"center",
+              gap:8 } },
+            e('div', { style:{ flex:1, minWidth:0 } },
+              e('div', { style:{ fontSize:12, fontWeight:600, color:"#444", marginBottom:3 } }, v.medidas || "—"),
+              e('div', { style:{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" } },
+                e('span', { style:{ fontSize:14, fontWeight:700, color } }, fmt(precioFinal)),
+                descPct > 0 && e('span', { style:{ fontSize:10, color:"#bbb", textDecoration:"line-through" } }, fmt(v.precio)),
+                adminMode && v.costo && e('span', { style:{ fontSize:10, color:"#aaa",
+                  background:"#f0f0f0", padding:"1px 5px", borderRadius:5 } },
+                  `costo: ${fmt(v.costo)} · ${Math.round((precioFinal/v.costo-1)*100)}%`)
+              ),
+              grupo.material === "Rotomoldeado" && e('div', { style:{ display:"flex", gap:5, alignItems:"center", marginTop:5 } },
+                ...[
+                  { bg:"#f5f5f5", bd:"1px solid #ccc", label:"Blanco" },
+                  { bg:"#1a1a1a", bd:"none", label:"Negro" },
+                  { bg:"#7a7a7a", bd:"none", label:"Gris" },
+                  { bg:"#c8a882", bd:"none", label:"Beige" },
+                ].map(c => e('div', { key:c.label, style:{ display:"flex", flexDirection:"column", alignItems:"center", gap:2 } },
+                  e('div', { style:{ width:13, height:13, borderRadius:"50%", background:c.bg, border:c.bd } }),
+                  e('span', { style:{ fontSize:9, color:"#bbb" } }, c.label)
+                ))
+              )
+            ),
+            e('button', {
+              onClick:()=>onAgregar(grupo, v, precioFinal),
+              style:{ padding:"6px 12px", borderRadius:8,
+                border:`1px solid ${color}`, background:"transparent",
+                color, fontSize:12, fontWeight:600, whiteSpace:"nowrap", flexShrink:0 }
+            }, "+ Agregar")
+          );
+        })
       ),
-      // Imagen a la derecha
-      fotos.length > 0 && e('div', { style:{ width:110, flexShrink:0, padding:"8px 8px 8px 0",
-          display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-start", gap:6 } },
-        e('div', { style:{ position:"relative", width:"100%", borderRadius:8, overflow:"hidden",
-            background:"#f5f3ef", border:"1px solid #eee" } },
-          e('img', { src:fotos[fotoIdx], alt:grupo.articulo,
-            style:{ width:"100%", height:110, objectFit:"contain", display:"block", padding:4 },
-            onError: ev => { ev.target.style.display="none"; }
-          })
-        ),
-        fotos.length > 1 && e('div', { style:{ display:"flex", gap:4, flexWrap:"wrap", justifyContent:"center" } },
-          fotos.map((url, i) =>
-            e('img', { key:i, src:url, alt:"", onClick:()=>setFotoIdx(i),
-              style:{ width:28, height:28, objectFit:"cover", borderRadius:4, cursor:"pointer",
-                border: i===fotoIdx ? `2px solid ${color}` : "2px solid #eee",
-                opacity: i===fotoIdx ? 1 : 0.6 },
-              onError: ev => { ev.target.style.display="none"; }
-            })
-          )
-        )
+
+      // Columna derecha: foto del modelo (UNA sola, sin miniaturas)
+      fotos.length > 0 && e('div', { style:{
+          width:100, flexShrink:0,
+          display:"flex", alignItems:"center", justifyContent:"center",
+          padding:"8px 8px 8px 4px",
+          borderLeft:"1px solid #f0ede8",
+          background:"#fafaf9" } },
+        e('img', { src:fotos[0], alt:grupo.articulo,
+          style:{ width:88, height:88, objectFit:"contain", borderRadius:8,
+            background:"#f5f3ef", display:"block" },
+          onError: ev => { ev.target.parentElement.style.display="none"; }
+        })
       )
     )
   );
 }
+
+
 
 // ─────────────────────────────────────────────
 // MODO MINORISTA
