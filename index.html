@@ -443,7 +443,9 @@ function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false, comp
           padding:"3px 8px", fontSize:11, color:"#888" }
       }, grupo.variantes.some(v => compartirSel[grupo.articulo + "||" + grupo.material + "||" + v.medidas]) ? "✓ sel." : "+ sel.")
     ),
-    grupo.variantes.map((v, vi) => {
+    e('div', { style:{ display:"flex", gap:0 } },
+      e('div', { style:{ flex:1, minWidth:0 } },
+        grupo.variantes.map((v, vi) => {
       if (grupo.material === "Fibrocemento" && v.acabados) {
         return e(VarianteFibro, { key:vi, v, grupo, descPct, pct, fmt, color, onAgregar, adminMode, compartirSel, toggleCompartir });
       }
@@ -489,6 +491,29 @@ function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false, comp
         )
       );
     })
+      ),
+      // Imagen a la derecha
+      fotos.length > 0 && e('div', { style:{ width:110, flexShrink:0, padding:"8px 8px 8px 0",
+          display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-start", gap:6 } },
+        e('div', { style:{ position:"relative", width:"100%", borderRadius:8, overflow:"hidden",
+            background:"#f5f3ef", border:"1px solid #eee" } },
+          e('img', { src:fotos[fotoIdx], alt:grupo.articulo,
+            style:{ width:"100%", height:110, objectFit:"contain", display:"block", padding:4 },
+            onError: ev => { ev.target.style.display="none"; }
+          })
+        ),
+        fotos.length > 1 && e('div', { style:{ display:"flex", gap:4, flexWrap:"wrap", justifyContent:"center" } },
+          fotos.map((url, i) =>
+            e('img', { key:i, src:url, alt:"", onClick:()=>setFotoIdx(i),
+              style:{ width:28, height:28, objectFit:"cover", borderRadius:4, cursor:"pointer",
+                border: i===fotoIdx ? `2px solid ${color}` : "2px solid #eee",
+                opacity: i===fotoIdx ? 1 : 0.6 },
+              onError: ev => { ev.target.style.display="none"; }
+            })
+          )
+        )
+      )
+    )
   );
 }
 
