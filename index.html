@@ -94,7 +94,7 @@ const MAT_COLORS = {
   Fertilizantes:"#388e3c",Insecticidas:"#b71c1c",Sustratos:"#795548",
 };
 
-const MATERIALES_MACETAS = ["Barro","Barro Artesanal","Fibrocemento","Rotomoldeado","Fibra de Vidrio","Cerámica","Plástico","Combo"];
+const MATERIALES_MACETAS = ["Barro","Barro Artesanal","Fibrocemento","Rotomoldeado","Fibra de Vidrio","Cerámica","Plástico"];
 const MATERIALES_INSUMOS = ["Fertilizantes","Insecticidas","Sustratos"];
 const MATERIALES_TODOS  = [...MATERIALES_MACETAS,...MATERIALES_INSUMOS];
 
@@ -288,12 +288,7 @@ function Filtros({ buscar, setBuscar, material, setMaterial, pintada, setPintada
         e(Pill, { key:m, label:m, active:material===m, color, onClick:()=>setMaterial(m) })
       )
     ),
-    // Pills pintada (solo macetas)
-    seccion === "macetas" && e('div', { style:{ display:"flex", gap:5, marginBottom:8 } },
-      ["Todos","Pintada","Sin pintar"].map(p =>
-        e(Pill, { key:p, label:p, active:pintada===p, color, onClick:()=>setPintada(p) })
-      )
-    ),
+
     e('div', { style:{ height:4 } })
   );
 }
@@ -363,8 +358,7 @@ function VarianteFibro({ v, grupo, descPct, pct, fmt, color, onAgregar, comparti
 function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false, compartirSel={}, toggleCompartir=null }) {
   const color = MODOS[modo]?.color || "#333";
   const dc = MAT_COLORS[grupo.material] || "#888";
-  const ps = (grupo.material==="Barro"||grupo.material==="Fibrocemento"||grupo.material==="Fibra de Vidrio"||MATERIALES_INSUMOS.includes(grupo.material))
-    ? "" : grupo.pintada ? " · pintada" : " · sin pintar";
+  const ps = "";
 
   return e('div', { style:{ background:"#fff", borderRadius:10, marginBottom:8,
       border:"1px solid #e8e4de", overflow:"hidden" } },
