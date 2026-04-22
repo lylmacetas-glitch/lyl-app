@@ -374,6 +374,7 @@ function CardGrilla({ grupo, onAgregar, descPct=0, modo, adminMode=false, expand
   return e('div', { style:{
       background:"#fff", borderRadius:12, border:"1px solid #e8e4de",
       overflow:"hidden", cursor:"pointer",
+      gridColumn: expandido ? "span 2" : "span 1",
       boxShadow: expandido ? "0 4px 20px rgba(0,0,0,0.12)" : "0 1px 4px rgba(0,0,0,0.06)",
       transition:"box-shadow .2s" },
     onClick: onToggle
@@ -406,19 +407,22 @@ function CardGrilla({ grupo, onAgregar, descPct=0, modo, adminMode=false, expand
         onClick:ev=>ev.stopPropagation() },
 
       // Header del panel
-      e('div', { style:{ display:"flex", alignItems:"center", gap:8, padding:"10px 12px 8px",
+      e('div', { style:{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px 8px",
           background:"#fafaf9", borderBottom:"1px solid #f0ede8" } },
         foto && e('img', { src:foto,
-          style:{ width:44, height:44, objectFit:"contain", borderRadius:8, background:"#f0ede8" },
+          style:{ width:52, height:52, objectFit:"contain", borderRadius:10, background:"#f0ede8", flexShrink:0 },
           onError:ev=>{ev.target.style.display="none"} }),
-        e('div', { flex:1 },
-          e('div', { style:{ fontWeight:700, fontSize:14, color:"#1a1a1a" } }, grupo.articulo),
-          e('div', { style:{ fontSize:10, color:"#999" } }, grupo.material)
+        e('div', { style:{ flex:1 } },
+          e('div', { style:{ fontWeight:700, fontSize:15, color:"#1a1a1a" } }, grupo.articulo),
+          e('div', { style:{ display:"flex", alignItems:"center", gap:4, marginTop:2 } },
+            e('div', { style:{ width:6, height:6, borderRadius:"50%", background:dc } }),
+            e('span', { style:{ fontSize:11, color:"#999" } }, grupo.material)
+          )
         ),
         e('button', { onClick:onToggle,
-          style:{ marginLeft:"auto", padding:"4px 8px", borderRadius:7,
+          style:{ padding:"5px 10px", borderRadius:8,
             border:"1px solid #ddd", background:"transparent",
-            color:"#aaa", fontSize:13, cursor:"pointer" } }, "✕")
+            color:"#aaa", fontSize:13, cursor:"pointer", flexShrink:0 } }, "✕")
       ),
 
       // Variantes
