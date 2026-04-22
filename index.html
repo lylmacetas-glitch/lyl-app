@@ -426,8 +426,9 @@ function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false, comp
           const yaSelec = grupo.variantes.some(v => compartirSel[key + "||" + v.medidas]);
           grupo.variantes.forEach(v => {
             const k = key + "||" + v.medidas;
-            if (yaSelec && compartirSel[k]) toggleCompartir(k, grupo, v);
-            else if (!yaSelec && !compartirSel[k]) toggleCompartir(k, grupo, v);
+            const pf = descPct > 0 ? pct(v.precio, descPct) : v.precio;
+            if (yaSelec && compartirSel[k]) toggleCompartir(k, grupo, v, pf);
+            else if (!yaSelec && !compartirSel[k]) toggleCompartir(k, grupo, v, pf);
           });
         },
         style:{ fontSize:11, padding:"3px 9px", borderRadius:8,
@@ -446,11 +447,14 @@ function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false, comp
             return e(VarianteFibro, { key:vi, v, grupo, descPct, pct, fmt, color, onAgregar, adminMode });
           }
           const precioFinal = descPct > 0 ? pct(v.precio, descPct) : v.precio;
+          const cKey = `${grupo.articulo}||${grupo.material}||${v.medidas}`;
+          const seleccionado = compartirSel[cKey];
           return e('div', { key:vi, style:{
               padding:"9px 12px",
               borderBottom: vi < grupo.variantes.length-1 ? "1px solid #f5f3ef" : "none",
               display:"flex", justifyContent:"space-between", alignItems:"center",
-              gap:8 } },
+              gap:8,
+              background: seleccionado ? "#f0fff4" : "transparent" } },
             e('div', { style:{ flex:1, minWidth:0 } },
               e('div', { style:{ fontSize:12, fontWeight:600, color:"#444", marginBottom:3 } }, v.medidas || "—"),
               e('div', { style:{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" } },
@@ -472,12 +476,22 @@ function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false, comp
                 ))
               )
             ),
-            e('button', {
-              onClick:()=>onAgregar(grupo, v, precioFinal),
-              style:{ padding:"6px 12px", borderRadius:8,
-                border:`1px solid ${color}`, background:"transparent",
-                color, fontSize:12, fontWeight:600, whiteSpace:"nowrap", flexShrink:0 }
-            }, "+ Agregar")
+            e('div', { style:{ display:"flex", gap:5, alignItems:"center", flexShrink:0 } },
+              toggleCompartir && e('button', {
+                onClick:()=>toggleCompartir(cKey, grupo, v, precioFinal),
+                style:{ width:26, height:26, borderRadius:6, border:"1px solid #ddd",
+                  background: seleccionado ? "#25D366" : "#fff",
+                  color: seleccionado ? "#fff" : "#aaa",
+                  fontSize:14, display:"flex", alignItems:"center", justifyContent:"center",
+                  cursor:"pointer", flexShrink:0 }
+              }, seleccionado ? "✓" : "□"),
+              e('button', {
+                onClick:()=>onAgregar(grupo, v, precioFinal),
+                style:{ padding:"6px 12px", borderRadius:8,
+                  border:`1px solid ${color}`, background:"transparent",
+                  color, fontSize:12, fontWeight:600, whiteSpace:"nowrap" }
+              }, "+ Agregar")
+            )
           );
         })
       ),
