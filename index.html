@@ -240,7 +240,7 @@ function Header({ modo, color, fecha, itemCount, vistaActual, onCambiarVista, on
 // ─────────────────────────────────────────────
 // FILTROS DE BÚSQUEDA (compartido)
 // ─────────────────────────────────────────────
-function Filtros({ buscar, setBuscar, material, setMaterial, pintada, setPintada, color, modo, precioMin, setPrecioMin, precioMax, setPrecioMax }) {
+function Filtros({ buscar, setBuscar, material, setMaterial, pintada, setPintada, color, modo, precioMin, setPrecioMin, precioMax, setPrecioMax, onToggleVista, vistaActual }) {
   const [seccion, setSeccion] = useState("macetas"); // macetas | insumos
   const [mostrarPrecio, setMostrarPrecio] = useState(false);
   const mats = seccion === "macetas" ? MATERIALES_MACETAS : MATERIALES_INSUMOS;
@@ -252,7 +252,23 @@ function Filtros({ buscar, setBuscar, material, setMaterial, pintada, setPintada
         padding:"8px 11px", borderRadius:8, border:`1px solid ${mostrarPrecio?color:"#ddd"}`,
         background: mostrarPrecio?color+"22":"transparent", color: mostrarPrecio?color:"#888",
         fontSize:11, fontWeight:600, whiteSpace:"nowrap"
-      }}, "💲 Precio")
+      }}, "💲 Precio"),
+      onToggleVista && e('div', { style:{ display:"flex", background:"#f0ede8", borderRadius:8, padding:2, border:"1px solid #e0dbd4" } },
+        e('button', { onClick:()=>onToggleVista("lista"), style:{
+          padding:"5px 8px", borderRadius:6, border:"none", fontSize:14, cursor:"pointer",
+          background: vistaActual==="lista" ? "#fff" : "transparent",
+          color: vistaActual==="lista" ? color : "#aaa",
+          boxShadow: vistaActual==="lista" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+          transition:"all .15s"
+        }}, "☰"),
+        e('button', { onClick:()=>onToggleVista("grilla"), style:{
+          padding:"5px 8px", borderRadius:6, border:"none", fontSize:14, cursor:"pointer",
+          background: vistaActual==="grilla" ? "#fff" : "transparent",
+          color: vistaActual==="grilla" ? color : "#aaa",
+          boxShadow: vistaActual==="grilla" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+          transition:"all .15s"
+        }}, "⊞")
+      )
     ),
     mostrarPrecio && e('div', { style:{ background:"#fff", borderRadius:10, padding:"10px 12px",
         border:`1px solid ${color}44`, marginBottom:8 } },
@@ -336,6 +352,100 @@ function getFotos(articulo, material) {
   return FOTOS_MODELOS[key2] || [];
 }
 
+
+
+// ─────────────────────────────────────────────
+// CARD GRILLA (vista 2 columnas)
+// ─────────────────────────────────────────────
+function CardGrilla({ grupo, onAgregar, descPct=0, modo, adminMode=false, expandido, onToggle }) {
+  const color = MODOS[modo]?.color || "#333";
+  const dc = MAT_COLORS[grupo.material] || "#888";
+  const foto = getFotos(grupo.articulo, grupo.material)[0] || null;
+
+  const precioDesde = () => {
+    const precios = grupo.variantes.map(v =>
+      grupo.material === "Fibrocemento" && v.acabados
+        ? (v.min_cruda || v.may_cruda || v.precio)
+        : (descPct > 0 ? pct(v.precio, descPct) : v.precio)
+    );
+    return Math.min(...precios);
+  };
+
+  return e('div', { style:{
+      background:"#fff", borderRadius:12, border:"1px solid #e8e4de",
+      overflow:"hidden", cursor:"pointer",
+      boxShadow: expandido ? "0 4px 20px rgba(0,0,0,0.12)" : "0 1px 4px rgba(0,0,0,0.06)",
+      transition:"box-shadow .2s" },
+    onClick: onToggle
+  },
+    // Foto
+    foto
+      ? e('img', { src:foto, alt:grupo.articulo,
+          style:{ width:"100%", aspectRatio:"1", objectFit:"cover", display:"block", background:"#f0ede8" },
+          onError: ev => { ev.target.style.display="none"; }
+        })
+      : e('div', { style:{ width:"100%", aspectRatio:"1", background:"linear-gradient(135deg,#f0ede8,#e8e4de)",
+          display:"flex", alignItems:"center", justifyContent:"center", fontSize:36, color:"#ccc" } }, "🪴"),
+
+    // Info
+    e('div', { style:{ padding:"8px 10px 10px" } },
+      e('div', { style:{ fontWeight:700, fontSize:13, color:"#1a1a1a",
+          whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" } }, grupo.articulo),
+      e('div', { style:{ display:"flex", alignItems:"center", gap:4, marginTop:2 } },
+        e('div', { style:{ width:6, height:6, borderRadius:"50%", background:dc } }),
+        e('span', { style:{ fontSize:10, color:"#999" } }, grupo.material)
+      ),
+      e('div', { style:{ marginTop:5, fontSize:12, fontWeight:700, color } },
+        e('span', { style:{ fontSize:9, fontWeight:400, color:"#aaa" } }, "desde "),
+        fmt(precioDesde())
+      )
+    ),
+
+    // Panel expandido
+    expandido && e('div', { style:{ borderTop:"1px solid #f0ede8" },
+        onClick:ev=>ev.stopPropagation() },
+
+      // Header del panel
+      e('div', { style:{ display:"flex", alignItems:"center", gap:8, padding:"10px 12px 8px",
+          background:"#fafaf9", borderBottom:"1px solid #f0ede8" } },
+        foto && e('img', { src:foto,
+          style:{ width:44, height:44, objectFit:"contain", borderRadius:8, background:"#f0ede8" },
+          onError:ev=>{ev.target.style.display="none"} }),
+        e('div', { flex:1 },
+          e('div', { style:{ fontWeight:700, fontSize:14, color:"#1a1a1a" } }, grupo.articulo),
+          e('div', { style:{ fontSize:10, color:"#999" } }, grupo.material)
+        ),
+        e('button', { onClick:onToggle,
+          style:{ marginLeft:"auto", padding:"4px 8px", borderRadius:7,
+            border:"1px solid #ddd", background:"transparent",
+            color:"#aaa", fontSize:13, cursor:"pointer" } }, "✕")
+      ),
+
+      // Variantes
+      grupo.variantes.map((v, vi) => {
+        if (grupo.material === "Fibrocemento" && v.acabados) {
+          return e(VarianteFibro, { key:vi, v, grupo, descPct, pct, fmt, color, onAgregar, adminMode });
+        }
+        const precioFinal = descPct > 0 ? pct(v.precio, descPct) : v.precio;
+        return e('div', { key:vi, style:{
+            padding:"9px 12px",
+            borderBottom: vi < grupo.variantes.length-1 ? "1px solid #f5f3ef" : "none",
+            display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 } },
+          e('div', null,
+            e('div', { style:{ fontSize:12, fontWeight:600, color:"#444" } }, v.medidas || "—"),
+            e('div', { style:{ fontSize:14, fontWeight:700, color, marginTop:1 } }, fmt(precioFinal))
+          ),
+          e('button', {
+            onClick:()=>onAgregar(grupo, v, precioFinal),
+            style:{ padding:"6px 12px", borderRadius:8, border:"none",
+              background:color, color:"#fff", fontSize:12, fontWeight:600,
+              cursor:"pointer", whiteSpace:"nowrap" }
+          }, "+ Agregar")
+        );
+      })
+    )
+  );
+}
 
 // ─────────────────────────────────────────────
 // CARD DE PRODUCTO (catálogo)
@@ -521,6 +631,8 @@ function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false, comp
 function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
   const color = MODOS.minorista.color;
   const [buscar, setBuscar] = useState(buscarInicial);
+  const [vistaGrilla, setVistaGrilla] = useState(false);
+  const [expandidoKey, setExpandidoKey] = useState(null);
   const [material, setMaterial] = useState("Todos");
   const [pintada, setPintada] = useState("Todos");
   const [descPct, setDescPct] = useState(0);
@@ -636,10 +748,19 @@ function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
           )
         )
       ),
-      e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo:"minorista",precioMin,setPrecioMin,precioMax,setPrecioMax}),
+      e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo:"minorista",precioMin,setPrecioMin,precioMax,setPrecioMax,onToggleVista:v=>{setVistaGrilla(v==="grilla");setExpandidoKey(null);},vistaActual:vistaGrilla?"grilla":"lista"}),
       e('div', { style:{ padding:"0 14px 80px" } },
         grupos.length===0
           ? e('div',{style:{textAlign:"center",color:"#aaa",padding:40}},"Sin resultados")
+          : vistaGrilla
+          ? e('div', { style:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 0 10px" } },
+              grupos.map((g,i) => {
+                const gKey = g.articulo+"||"+g.material;
+                return e(CardGrilla,{key:i,grupo:g,onAgregar:agregar,descPct,modo:"minorista",adminMode,
+                  expandido:expandidoKey===gKey,
+                  onToggle:()=>setExpandidoKey(expandidoKey===gKey?null:gKey)});
+              })
+            )
           : grupos.map((g,i)=>e(ProductoCard,{key:i,grupo:g,onAgregar:agregar,descPct,modo:"minorista",adminMode}))
       )
     ),
@@ -705,6 +826,8 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
     }
   },[]);
   const [buscar, setBuscar] = useState(buscarInicial||"");
+  const [vistaGrilla, setVistaGrilla] = useState(false);
+  const [expandidoKey, setExpandidoKey] = useState(null);
   const [compartirSel, setCompartirSel] = useState({});
   const toggleCompartir = (key, grupo, v, precio) => {
     setCompartirSel(prev => {
@@ -888,12 +1011,21 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
 
   // CATALOGO VIEW
   const catalogo = e('div', null,
-    e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo,precioMin,setPrecioMin,precioMax,setPrecioMax}),
+    e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo,precioMin,setPrecioMin,precioMax,setPrecioMax,onToggleVista:v=>{setVistaGrilla(v==="grilla");setExpandidoKey(null);},vistaActual:vistaGrilla?"grilla":"lista"}),
     e('div', { style:{ padding:"0 14px 80px" } },
       grupos.length===0
         ?e('div',{style:{textAlign:"center",color:"#aaa",padding:40}},"Sin resultados")
-        :grupos.map((g,i)=>e(ProductoCard,{key:i,grupo:g,onAgregar:agregar,descPct:0,modo,adminMode,
-            compartirSel,toggleCompartir})),
+        :vistaGrilla
+          ? e('div', { style:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 0 10px" } },
+              grupos.map((g,i) => {
+                const gKey = g.articulo+"||"+g.material;
+                return e(CardGrilla,{key:i,grupo:g,onAgregar:agregar,descPct:0,modo,adminMode,
+                  expandido:expandidoKey===gKey,
+                  onToggle:()=>setExpandidoKey(expandidoKey===gKey?null:gKey)});
+              })
+            )
+          : grupos.map((g,i)=>e(ProductoCard,{key:i,grupo:g,onAgregar:agregar,descPct:0,modo,adminMode,
+              compartirSel,toggleCompartir})),
       e('div', { style:{ height:80 } }),
       compartirCount > 0 && e('div', { style:{
           position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)",
