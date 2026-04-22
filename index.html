@@ -360,7 +360,9 @@ function getFotos(articulo, material) {
 function CardGrilla({ grupo, onAgregar, descPct=0, modo, adminMode=false, expandido, onToggle }) {
   const color = MODOS[modo]?.color || "#333";
   const dc = MAT_COLORS[grupo.material] || "#888";
-  const foto = getFotos(grupo.articulo, grupo.material)[0] || null;
+  const fotos = getFotos(grupo.articulo, grupo.material);
+  const foto = fotos[0] || null;
+  const [carouselIdx, setCarouselIdx] = React.useState(0);
 
   const precioDesde = () => {
     const precios = grupo.variantes.map(v =>
@@ -409,7 +411,7 @@ function CardGrilla({ grupo, onAgregar, descPct=0, modo, adminMode=false, expand
       // Header del panel
       e('div', { style:{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px 8px",
           background:"#fafaf9", borderBottom:"1px solid #f0ede8" } },
-        foto && e('img', { src:foto,
+        fotos.length > 0 && e('img', { src:fotos[carouselIdx] || fotos[0],
           style:{ width:52, height:52, objectFit:"contain", borderRadius:10, background:"#f0ede8", flexShrink:0 },
           onError:ev=>{ev.target.style.display="none"} }),
         e('div', { style:{ flex:1 } },
@@ -423,6 +425,44 @@ function CardGrilla({ grupo, onAgregar, descPct=0, modo, adminMode=false, expand
           style:{ padding:"5px 10px", borderRadius:8,
             border:"1px solid #ddd", background:"transparent",
             color:"#aaa", fontSize:13, cursor:"pointer", flexShrink:0 } }, "✕")
+      ),
+
+      // Carrusel de fotos (si hay más de 1)
+      fotos.length > 0 && e('div', { style:{ position:"relative", background:"#f5f3ef",
+          borderBottom:"1px solid #f0ede8", overflow:"hidden" } },
+        e('img', { src:fotos[carouselIdx], alt:grupo.articulo,
+          style:{ width:"100%", height:200, objectFit:"contain", display:"block", padding:8 },
+          onError:ev=>{ ev.target.style.display="none"; }
+        }),
+        // Flechas
+        fotos.length > 1 && e('button', {
+          onClick:ev=>{ ev.stopPropagation(); setCarouselIdx(i=>(i-1+fotos.length)%fotos.length); },
+          style:{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)",
+            width:32, height:32, borderRadius:"50%", border:"none",
+            background:"rgba(255,255,255,0.85)", fontSize:16, cursor:"pointer",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            boxShadow:"0 1px 4px rgba(0,0,0,0.15)" }
+        }, "‹"),
+        fotos.length > 1 && e('button', {
+          onClick:ev=>{ ev.stopPropagation(); setCarouselIdx(i=>(i+1)%fotos.length); },
+          style:{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)",
+            width:32, height:32, borderRadius:"50%", border:"none",
+            background:"rgba(255,255,255,0.85)", fontSize:16, cursor:"pointer",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            boxShadow:"0 1px 4px rgba(0,0,0,0.15)" }
+        }, "›"),
+        // Dots
+        fotos.length > 1 && e('div', { style:{ position:"absolute", bottom:8, left:0, right:0,
+            display:"flex", justifyContent:"center", gap:5 } },
+          fotos.map((_, i) =>
+            e('div', { key:i,
+              onClick:ev=>{ ev.stopPropagation(); setCarouselIdx(i); },
+              style:{ width: i===carouselIdx ? 18 : 6, height:6, borderRadius:3,
+                background: i===carouselIdx ? color : "rgba(255,255,255,0.6)",
+                cursor:"pointer", transition:"all .2s" }
+            })
+          )
+        )
       ),
 
       // Variantes
