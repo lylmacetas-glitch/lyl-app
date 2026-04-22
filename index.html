@@ -444,7 +444,7 @@ function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false, comp
       e('div', { style:{ flex:1, minWidth:0 } },
         grupo.variantes.map((v, vi) => {
           if (grupo.material === "Fibrocemento" && v.acabados) {
-            return e(VarianteFibro, { key:vi, v, grupo, descPct, pct, fmt, color, onAgregar, adminMode });
+            return e(VarianteFibro, { key:vi, v, grupo, descPct, pct, fmt, color, onAgregar, adminMode, compartirSel, toggleCompartir });
           }
           const precioFinal = descPct > 0 ? pct(v.precio, descPct) : v.precio;
           const cKey = `${grupo.articulo}||${grupo.material}||${v.medidas}`;
