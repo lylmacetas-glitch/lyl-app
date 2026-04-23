@@ -240,8 +240,7 @@ function Header({ modo, color, fecha, itemCount, vistaActual, onCambiarVista, on
 // ─────────────────────────────────────────────
 // FILTROS DE BÚSQUEDA (compartido)
 // ─────────────────────────────────────────────
-function Filtros({ buscar, setBuscar, material, setMaterial, pintada, setPintada, color, modo, precioMin, setPrecioMin, precioMax, setPrecioMax, onToggleVista, vistaActual }) {
-  const [seccion, setSeccion] = useState("macetas"); // macetas | insumos
+function Filtros({ buscar, setBuscar, material, setMaterial, pintada, setPintada, color, modo, precioMin, setPrecioMin, precioMax, setPrecioMax, onToggleVista, vistaActual, seccion, setSeccion }) {
   const [mostrarPrecio, setMostrarPrecio] = useState(false);
   const mats = seccion === "macetas" ? MATERIALES_MACETAS : MATERIALES_INSUMOS;
 
@@ -677,6 +676,8 @@ function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
   const [buscar, setBuscar] = useState(buscarInicial);
   const [vistaGrilla, setVistaGrilla] = useState(false);
   const [expandidoKey, setExpandidoKey] = useState(null);
+  const [seccionCatalogo, setSeccionCatalogo] = useState("macetas");
+  const [seccionCatalogo, setSeccionCatalogo] = useState("macetas");
   const [material, setMaterial] = useState("Todos");
   const [pintada, setPintada] = useState("Todos");
   const [descPct, setDescPct] = useState(0);
@@ -702,8 +703,9 @@ function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
     const mats = material==="Todos"
       ? (b ? MATERIALES_TODOS : MATERIALES_TODOS)
       : [material];
+    const matsPermitidos = seccionCatalogo==="macetas" ? MATERIALES_MACETAS : MATERIALES_INSUMOS;
     const filtrados = productos.filter(p=>{
-      const inMat = material==="Todos" || p.material===material;
+      const inMat = (material==="Todos" ? matsPermitidos.includes(p.material) : p.material===material);
       const tokens = b.split(/\s+/).filter(Boolean);
       const texto = (p.articulo + " " + p.medidas).toLowerCase();
       const inBuscar = !b || tokens.every(t => texto.includes(t));
@@ -792,7 +794,7 @@ function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
           )
         )
       ),
-      e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo:"minorista",precioMin,setPrecioMin,precioMax,setPrecioMax,onToggleVista:v=>{setVistaGrilla(v==="grilla");setExpandidoKey(null);},vistaActual:vistaGrilla?"grilla":"lista"}),
+      e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo:"minorista",precioMin,setPrecioMin,precioMax,setPrecioMax,onToggleVista:v=>{setVistaGrilla(v==="grilla");setExpandidoKey(null);},vistaActual:vistaGrilla?"grilla":"lista",seccion:seccionCatalogo,setSeccion:v=>{setSeccionCatalogo(v);setMaterial("Todos");}}),
       e('div', { style:{ padding:"0 14px 80px" } },
         grupos.length===0
           ? e('div',{style:{textAlign:"center",color:"#aaa",padding:40}},"Sin resultados")
@@ -953,8 +955,9 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
 
   const grupos = useMemo(()=>{
     const b2=buscar.toLowerCase();
+    const matsPermitidos2 = seccionCatalogo==="macetas" ? MATERIALES_MACETAS : MATERIALES_INSUMOS;
     const filtrados=productos.filter(p=>{
-      const inMat=material==="Todos"||p.material===material;
+      const inMat=material==="Todos" ? matsPermitidos2.includes(p.material) : p.material===material;
       const inB=!b2||p.articulo.toLowerCase().includes(b2)||p.medidas.toLowerCase().includes(b2);
       const inP=(p.material==="Fibrocemento"||p.material==="Fibra de Vidrio")||pintada==="Todos"||(pintada==="Pintada"&&p.pintada)||(pintada==="Sin pintar"&&!p.pintada);
       const pMin=precioMin?p.precio>=parseFloat(precioMin):true;
@@ -1055,7 +1058,7 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
 
   // CATALOGO VIEW
   const catalogo = e('div', null,
-    e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo,precioMin,setPrecioMin,precioMax,setPrecioMax,onToggleVista:v=>{setVistaGrilla(v==="grilla");setExpandidoKey(null);},vistaActual:vistaGrilla?"grilla":"lista"}),
+    e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo,precioMin,setPrecioMin,precioMax,setPrecioMax,onToggleVista:v=>{setVistaGrilla(v==="grilla");setExpandidoKey(null);},vistaActual:vistaGrilla?"grilla":"lista",seccion:seccionCatalogo,setSeccion:v=>{setSeccionCatalogo(v);setMaterial("Todos");}}),
     e('div', { style:{ padding:"0 14px 80px" } },
       grupos.length===0
         ?e('div',{style:{textAlign:"center",color:"#aaa",padding:40}},"Sin resultados")
@@ -1687,6 +1690,101 @@ function PanelRegistro({ onVolver, onRecuperar }) {
 }
 
 
+
+// ─────────────────────────────────────────────
+// PANTALLA BIENVENIDA
+// ─────────────────────────────────────────────
+function PantallaBienvenida({ modo, onEntrar }) {
+  const cfg = {
+    mayorista: { label:"Lista Mayorista", color:"#2c5f7a", bg:"#1a3a4a", badge:"📦", desc:"Presupuestador completo para profesionales" },
+    clientes:  { label:"Lista Clientes",  color:"#6b4a2a", bg:"#2d1f0e", badge:"⭐", desc:"Tu lista personalizada LyL" },
+  }[modo] || { label:"Lista de precios", color:"#3a6b4a", bg:"#1e3a2a", badge:"🌿", desc:"" };
+
+  return e('div', { style:{
+    minHeight:"100vh", background:cfg.bg,
+    display:"flex", flexDirection:"column",
+    alignItems:"center", justifyContent:"center",
+    padding:"32px 24px", position:"relative", overflow:"hidden",
+    fontFamily:"inherit"
+  }},
+
+    // Elementos decorativos SVG de marca (hojas + maceta + líneas)
+    e('svg', { style:{ position:"absolute", top:0, left:0, width:"100%", height:"100%", opacity:0.07, pointerEvents:"none" },
+        viewBox:"0 0 400 700", xmlns:"http://www.w3.org/2000/svg" },
+      // Hoja grande arriba izquierda
+      e('path', { d:"M-20 80 Q40 20 100 60 Q60 120 -20 80Z", stroke:"#fff", strokeWidth:1.5, fill:"none" }),
+      e('line', { x1:"40", y1:"60", x2:"40", y2:"100", stroke:"#fff", strokeWidth:1 }),
+      e('line', { x1:"25", y1:"72", x2:"55", y2:"72", stroke:"#fff", strokeWidth:0.8 }),
+      // Hoja pequeña arriba
+      e('path', { d:"M60 20 Q90 -10 120 20 Q90 50 60 20Z", stroke:"#fff", strokeWidth:1.2, fill:"none" }),
+      // Maceta hexagonal arriba derecha  
+      e('polygon', { points:"340,30 370,46 370,80 340,96 310,80 310,46", stroke:"#fff", strokeWidth:1.2, fill:"none" }),
+      e('line', { x1:"310", y1:"63", x2:"370", y2:"63", stroke:"#fff", strokeWidth:0.8 }),
+      e('line', { x1:"325", y1:"46", x2:"340", y2:"63", stroke:"#fff", strokeWidth:0.8 }),
+      e('line', { x1:"355", y1:"46", x2:"340", y2:"63", stroke:"#fff", strokeWidth:0.8 }),
+      // Líneas rectas decorativas
+      e('line', { x1:"380", y1:"150", x2:"380", y2:"280", stroke:"#fff", strokeWidth:1 }),
+      e('line', { x1:"20", y1:"600", x2:"20", y2:"700", stroke:"#fff", strokeWidth:1 }),
+      // Maceta hexagonal abajo izquierda
+      e('polygon', { points:"30,560 60,576 60,610 30,626 0,610 0,576", stroke:"#fff", strokeWidth:1.2, fill:"none" }),
+      // Hoja abajo derecha
+      e('path', { d:"M380 620 Q420 580 440 620 Q410 660 380 620Z", stroke:"#fff", strokeWidth:1.2, fill:"none" }),
+      e('line', { x1:"410", y1:"620", x2:"410", y2:"650", stroke:"#fff", strokeWidth:0.8 }),
+      // Círculo decorativo
+      e('circle', { cx:"200", cy:"680", r:"40", stroke:"#fff", strokeWidth:1, fill:"none" }),
+    ),
+
+    // Logo LyL
+    e('div', { style:{ position:"relative", zIndex:1, marginBottom:32, textAlign:"center" } },
+      e('img', { 
+        src:"https://www.lylmacetas.com.ar/wp-content/uploads/2022/02/logo-02.svg",
+        alt:"LyL Macetas",
+        style:{ height:64, filter:"brightness(0) invert(1)", display:"block", margin:"0 auto 16px" },
+        onError: ev => { ev.target.style.display="none"; }
+      }),
+      e('div', { style:{ color:"rgba(255,255,255,0.4)", fontSize:11, letterSpacing:"3px", textTransform:"uppercase" } },
+        "Contenedores de naturaleza"
+      )
+    ),
+
+    // Card canal
+    e('div', { style:{
+      position:"relative", zIndex:1,
+      background:"rgba(255,255,255,0.08)",
+      border:"1px solid rgba(255,255,255,0.15)",
+      borderRadius:16, padding:"24px 28px",
+      width:"100%", maxWidth:300, marginBottom:32,
+      textAlign:"center"
+    }},
+      e('div', { style:{ fontSize:28, marginBottom:8 } }, cfg.badge),
+      e('div', { style:{ color:"#fff", fontSize:20, fontWeight:700, marginBottom:6 } }, cfg.label),
+      e('div', { style:{ color:"rgba(255,255,255,0.5)", fontSize:12 } }, cfg.desc),
+      e('div', { style:{ height:1, background:"rgba(255,255,255,0.1)", margin:"16px 0" } }),
+      e('div', { style:{ color:"rgba(255,255,255,0.4)", fontSize:11, letterSpacing:1 } },
+        new Date().toLocaleDateString("es-AR", {month:"long", year:"numeric"}).toUpperCase()
+      )
+    ),
+
+    // Botón entrar
+    e('button', { 
+      onClick: onEntrar,
+      style:{
+        position:"relative", zIndex:1,
+        background:"#fff", color:cfg.bg,
+        border:"none", borderRadius:14,
+        padding:"16px 48px", fontSize:15, fontWeight:700,
+        cursor:"pointer", fontFamily:"inherit",
+        width:"100%", maxWidth:280,
+        letterSpacing:"0.5px"
+      }
+    }, "Ver catálogo →"),
+
+    e('div', { style:{ position:"relative", zIndex:1, color:"rgba(255,255,255,0.2)", fontSize:10, marginTop:16, letterSpacing:1 } },
+      "Precios de contado · " + new Date().toLocaleDateString("es-AR")
+    )
+  );
+}
+
 // ─────────────────────────────────────────────
 // APP PRINCIPAL
 // ─────────────────────────────────────────────
@@ -1702,6 +1800,7 @@ function App() {
   // Si entró por link directo, ocultar botón volver al selector
   const linkDirecto = modoUrl !== "selector";
   const [pantalla, setPantalla] = useState(modoUrl);
+  const [showSplash, setShowSplash] = useState(() => ["mayorista","clientes"].includes(modoUrl));
   const [adminMode, setAdminMode] = useState(false);
   const [descCliente, setDescCliente] = useState(10);
   const [presupuestoRecuperado, setPresupuestoRecuperado] = useState(null);
@@ -1726,6 +1825,8 @@ function App() {
     return Object.values(map);
   },[productosMin,productosMay]);
 
+  if(showSplash && ["mayorista","clientes"].includes(pantalla))
+    return e(PantallaBienvenida, { modo:pantalla, onEntrar:()=>setShowSplash(false) });
   if(pantalla==="selector")
     return e(PantallaSelector,{
       onSelect:p=>setPantalla(p),
