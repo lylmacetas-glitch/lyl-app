@@ -240,7 +240,7 @@ function Header({ modo, color, fecha, itemCount, vistaActual, onCambiarVista, on
 // ─────────────────────────────────────────────
 // FILTROS DE BÚSQUEDA (compartido)
 // ─────────────────────────────────────────────
-function Filtros({ buscar, setBuscar, material, setMaterial, pintada, setPintada, color, modo, precioMin, setPrecioMin, precioMax, setPrecioMax, onToggleVista, vistaActual, onSectionChange }) {
+function Filtros({ buscar, setBuscar, material, setMaterial, pintada, setPintada, color, modo, precioMin, setPrecioMin, precioMax, setPrecioMax, onToggleVista, vistaActual }) {
   const [seccion, setSeccion] = useState("macetas");
   const [mostrarPrecio, setMostrarPrecio] = useState(false);
   const mats = seccion === "macetas" ? MATERIALES_MACETAS : MATERIALES_INSUMOS;
@@ -291,7 +291,7 @@ function Filtros({ buscar, setBuscar, material, setMaterial, pintada, setPintada
     // Sección tabs
     e('div', { style:{ display:"flex", gap:8, margin:"8px 0 6px" } },
       ["macetas","insumos"].map(s =>
-        e('button', { key:s, onClick:()=>{ setSeccion(s); setMaterial("Todos"); if(onSectionChange) onSectionChange(s); }, style:{
+        e('button', { key:s, onClick:()=>{ setSeccion(s); setMaterial(s==="macetas" ? "__MACETAS__" : "__INSUMOS__"); }, style:{
           flex:1, padding:"5px", borderRadius:8, border:"none",
           background: seccion===s ? color : "#e8e4de",
           color: seccion===s ? "#fff" : "#777", fontSize:12, fontWeight:600 }
@@ -300,9 +300,13 @@ function Filtros({ buscar, setBuscar, material, setMaterial, pintada, setPintada
     ),
     // Pills material
     e('div', { style:{ display:"flex", gap:5, flexWrap:"wrap", marginBottom:6 } },
-      ["Todos",...mats].map(m =>
-        e(Pill, { key:m, label:m, active:material===m, color, onClick:()=>setMaterial(m) })
-      )
+      ["Todos",...mats].map(m => {
+          const isAll = m==="Todos";
+          const allVal = seccion==="macetas" ? "__MACETAS__" : "__INSUMOS__";
+          const val = isAll ? allVal : m;
+          const isActive = isAll ? (material===allVal||material==="Todos") : material===m;
+          return e(Pill, { key:m, label:m, active:isActive, color, onClick:()=>setMaterial(val) });
+        })
     ),
 
     e('div', { style:{ height:4 } })
@@ -677,7 +681,6 @@ function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
   const [buscar, setBuscar] = useState(buscarInicial);
   const [vistaGrilla, setVistaGrilla] = useState(false);
   const [expandidoKey, setExpandidoKey] = useState(null);
-  const [seccionCatalogo, setSeccionCatalogo] = useState("macetas");
   const [material, setMaterial] = useState("Todos");
   const [pintada, setPintada] = useState("Todos");
   const [descPct, setDescPct] = useState(0);
@@ -703,9 +706,10 @@ function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
     const mats = material==="Todos"
       ? (b ? MATERIALES_TODOS : MATERIALES_TODOS)
       : [material];
-    const matsOk = seccionCatalogo==="macetas" ? MATERIALES_MACETAS : MATERIALES_INSUMOS;
     const filtrados = productos.filter(p=>{
-      const inMat = material==="Todos" ? matsOk.includes(p.material) : p.material===material;
+      const inMat = material==="__MACETAS__" ? MATERIALES_MACETAS.includes(p.material)
+        : material==="__INSUMOS__" ? MATERIALES_INSUMOS.includes(p.material)
+        : material==="Todos" || p.material===material;
       const tokens = b.split(/\s+/).filter(Boolean);
       const texto = (p.articulo + " " + p.medidas).toLowerCase();
       const inBuscar = !b || tokens.every(t => texto.includes(t));
@@ -794,7 +798,7 @@ function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
           )
         )
       ),
-      e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo:"minorista",precioMin,setPrecioMin,precioMax,setPrecioMax,onToggleVista:v=>{setVistaGrilla(v==="grilla");setExpandidoKey(null);},vistaActual:vistaGrilla?"grilla":"lista",onSectionChange:s=>setSeccionCatalogo(s)}),
+      e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo:"minorista",precioMin,setPrecioMin,precioMax,setPrecioMax,onToggleVista:v=>{setVistaGrilla(v==="grilla");setExpandidoKey(null);},vistaActual:vistaGrilla?"grilla":"lista"}),
       e('div', { style:{ padding:"0 14px 80px" } },
         grupos.length===0
           ? e('div',{style:{textAlign:"center",color:"#aaa",padding:40}},"Sin resultados")
@@ -955,9 +959,10 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
 
   const grupos = useMemo(()=>{
     const b2=buscar.toLowerCase();
-    const matsOk2 = seccionCatalogo==="macetas" ? MATERIALES_MACETAS : MATERIALES_INSUMOS;
     const filtrados=productos.filter(p=>{
-      const inMat=material==="Todos" ? matsOk2.includes(p.material) : p.material===material;
+      const inMat=material==="__MACETAS__" ? MATERIALES_MACETAS.includes(p.material)
+        : material==="__INSUMOS__" ? MATERIALES_INSUMOS.includes(p.material)
+        : material==="Todos"||p.material===material;
       const inB=!b2||p.articulo.toLowerCase().includes(b2)||p.medidas.toLowerCase().includes(b2);
       const inP=(p.material==="Fibrocemento"||p.material==="Fibra de Vidrio")||pintada==="Todos"||(pintada==="Pintada"&&p.pintada)||(pintada==="Sin pintar"&&!p.pintada);
       const pMin=precioMin?p.precio>=parseFloat(precioMin):true;
@@ -1058,7 +1063,7 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
 
   // CATALOGO VIEW
   const catalogo = e('div', null,
-    e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo,precioMin,setPrecioMin,precioMax,setPrecioMax,onToggleVista:v=>{setVistaGrilla(v==="grilla");setExpandidoKey(null);},vistaActual:vistaGrilla?"grilla":"lista",onSectionChange:s=>setSeccionCatalogo(s)}),
+    e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo,precioMin,setPrecioMin,precioMax,setPrecioMax,onToggleVista:v=>{setVistaGrilla(v==="grilla");setExpandidoKey(null);},vistaActual:vistaGrilla?"grilla":"lista"}),
     e('div', { style:{ padding:"0 14px 80px" } },
       grupos.length===0
         ?e('div',{style:{textAlign:"center",color:"#aaa",padding:40}},"Sin resultados")
