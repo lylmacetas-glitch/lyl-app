@@ -1690,6 +1690,142 @@ function PanelRegistro({ onVolver, onRecuperar }) {
 
 
 // ─────────────────────────────────────────────
+// PANTALLAS DE BIENVENIDA
+// ─────────────────────────────────────────────
+function SplashMayorista({ onEntrar }) {
+  return e('div', { style:{
+    minHeight:"100vh", background:"#1a3344",
+    display:"flex", flexDirection:"column",
+    alignItems:"center", justifyContent:"center",
+    padding:"40px 24px", position:"relative", overflow:"hidden",
+    fontFamily:"inherit"
+  }},
+    e('svg', { style:{ position:"absolute", top:0, left:0, width:"100%", height:"100%",
+        opacity:0.07, pointerEvents:"none" },
+        viewBox:"0 0 400 700", xmlns:"http://www.w3.org/2000/svg" },
+      e('polygon', { points:"20,40 80,20 100,60 60,100 0,80", stroke:"#fff", strokeWidth:1.2, fill:"none" }),
+      e('line', { x1:"380", y1:"100", x2:"380", y2:"300", stroke:"#fff", strokeWidth:1 }),
+      e('rect', { x:"320", y:"200", width:"55", height:"55", stroke:"#fff", strokeWidth:1, fill:"none" }),
+      e('polygon', { points:"330,30 360,47 360,80 330,97 300,80 300,47", stroke:"#fff", strokeWidth:1.2, fill:"none" }),
+      e('line', { x1:"300", y1:"63", x2:"360", y2:"63", stroke:"#fff", strokeWidth:0.7 }),
+      e('path', { d:"M20 600 Q70 550 100 600 Q70 650 20 600Z", stroke:"#fff", strokeWidth:1.2, fill:"none" }),
+      e('circle', { cx:"360", cy:"640", r:"35", stroke:"#fff", strokeWidth:1, fill:"none" })
+    ),
+    e('div', { style:{ position:"relative", zIndex:1, marginBottom:36, textAlign:"center" } },
+      e('img', { src:"https://www.lylmacetas.com.ar/wp-content/uploads/2022/02/logo-02.svg",
+        alt:"LyL Macetas",
+        style:{ height:56, filter:"brightness(0) invert(1)", display:"block", margin:"0 auto 14px" },
+        onError:ev=>{ ev.target.style.display="none"; }
+      }),
+      e('div', { style:{ color:"rgba(255,255,255,0.35)", fontSize:10, letterSpacing:"3px", textTransform:"uppercase" } },
+        "Contenedores de naturaleza"
+      )
+    ),
+    e('div', { style:{
+      position:"relative", zIndex:1,
+      background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)",
+      borderRadius:18, padding:"28px 32px",
+      width:"100%", maxWidth:300, marginBottom:36, textAlign:"center"
+    }},
+      e('div', { style:{ fontSize:13, letterSpacing:"3px", textTransform:"uppercase",
+        color:"rgba(255,255,255,0.4)", marginBottom:12 } }, "Canal"),
+      e('div', { style:{ fontSize:28, fontWeight:700, color:"#fff", marginBottom:6 } }, "Mayorista"),
+      e('div', { style:{ height:1, background:"rgba(255,255,255,0.08)", margin:"18px 0" } }),
+      e('div', { style:{ display:"flex", justifyContent:"space-around" } },
+        e('div', { style:{ textAlign:"center" } },
+          e('div', { style:{ color:"rgba(255,255,255,0.35)", fontSize:10, letterSpacing:"1px", textTransform:"uppercase" } }, "Precios"),
+          e('div', { style:{ color:"#7ec8e3", fontSize:13, fontWeight:600, marginTop:3 } }, "Contado")
+        ),
+        e('div', { style:{ textAlign:"center" } },
+          e('div', { style:{ color:"rgba(255,255,255,0.35)", fontSize:10, letterSpacing:"1px", textTransform:"uppercase" } }, "Lista"),
+          e('div', { style:{ color:"#7ec8e3", fontSize:13, fontWeight:600, marginTop:3 } },
+            new Date().toLocaleDateString("es-AR", {month:"short", year:"numeric"}).toUpperCase()
+          )
+        )
+      )
+    ),
+    e('button', { onClick:onEntrar, style:{
+      position:"relative", zIndex:1,
+      background:"#7ec8e3", color:"#1a3344",
+      border:"none", borderRadius:14, padding:"16px 0",
+      fontSize:15, fontWeight:700, cursor:"pointer",
+      fontFamily:"inherit", width:"100%", maxWidth:280
+    }}, "Ver lista mayorista →"),
+    e('div', { style:{ position:"relative", zIndex:1, color:"rgba(255,255,255,0.2)",
+      fontSize:10, marginTop:14 } }, "lylmacetas.com.ar")
+  );
+}
+
+function SplashClientes({ onEntrar }) {
+  return e('div', { style:{
+    minHeight:"100vh", background:"#1e3a2a",
+    display:"flex", flexDirection:"column",
+    alignItems:"center", justifyContent:"center",
+    padding:"40px 24px", position:"relative", overflow:"hidden",
+    fontFamily:"inherit"
+  }},
+    e('svg', { style:{ position:"absolute", top:0, left:0, width:"100%", height:"100%",
+        opacity:0.08, pointerEvents:"none" },
+        viewBox:"0 0 400 700", xmlns:"http://www.w3.org/2000/svg" },
+      e('path', { d:"M-10 90 Q50 20 110 70 Q70 140 -10 90Z", stroke:"#fff", strokeWidth:1.5, fill:"none" }),
+      e('line', { x1:"50", y1:"55", x2:"50", y2:"110", stroke:"#fff", strokeWidth:1 }),
+      e('line', { x1:"25", y1:"75", x2:"75", y2:"75", stroke:"#fff", strokeWidth:0.8 }),
+      e('polygon', { points:"320,20 365,44 365,92 320,116 275,92 275,44",
+        stroke:"#fff", strokeWidth:1.5, fill:"none" }),
+      e('line', { x1:"275", y1:"68", x2:"365", y2:"68", stroke:"#fff", strokeWidth:0.8 }),
+      e('line', { x1:"297", y1:"44", x2:"320", y2:"68", stroke:"#fff", strokeWidth:0.8 }),
+      e('line', { x1:"343", y1:"44", x2:"320", y2:"68", stroke:"#fff", strokeWidth:0.8 }),
+      e('polygon', { points:"30,350 55,363 55,390 30,403 5,390 5,363",
+        stroke:"#fff", strokeWidth:1.2, fill:"none" }),
+      e('path', { d:"M20 640 Q60 600 80 640 Q55 680 20 640Z", stroke:"#fff", strokeWidth:1, fill:"none" }),
+      e('circle', { cx:"390", cy:"340", r:"30", stroke:"#fff", strokeWidth:1, fill:"none" })
+    ),
+    e('div', { style:{ position:"relative", zIndex:1, marginBottom:36, textAlign:"center" } },
+      e('img', { src:"https://www.lylmacetas.com.ar/wp-content/uploads/2022/02/logo-02.svg",
+        alt:"LyL Macetas",
+        style:{ height:56, filter:"brightness(0) invert(1)", display:"block", margin:"0 auto 14px" },
+        onError:ev=>{ ev.target.style.display="none"; }
+      }),
+      e('div', { style:{ color:"rgba(255,255,255,0.35)", fontSize:10, letterSpacing:"3px", textTransform:"uppercase" } },
+        "Contenedores de naturaleza"
+      )
+    ),
+    e('div', { style:{
+      position:"relative", zIndex:1,
+      background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)",
+      borderRadius:18, padding:"28px 32px",
+      width:"100%", maxWidth:300, marginBottom:36, textAlign:"center"
+    }},
+      e('div', { style:{ fontSize:13, letterSpacing:"3px", textTransform:"uppercase",
+        color:"rgba(255,255,255,0.4)", marginBottom:12 } }, "Lista de Precios"),
+      e('div', { style:{ fontSize:28, fontWeight:700, color:"#fff", marginBottom:6 } }, "Clientes"),
+      e('div', { style:{ height:1, background:"rgba(255,255,255,0.08)", margin:"18px 0" } }),
+      e('div', { style:{ display:"flex", justifyContent:"space-around" } },
+        e('div', { style:{ textAlign:"center" } },
+          e('div', { style:{ color:"rgba(255,255,255,0.35)", fontSize:10, letterSpacing:"1px", textTransform:"uppercase" } }, "Precios"),
+          e('div', { style:{ color:"#a8d5b5", fontSize:13, fontWeight:600, marginTop:3 } }, "Contado")
+        ),
+        e('div', { style:{ textAlign:"center" } },
+          e('div', { style:{ color:"rgba(255,255,255,0.35)", fontSize:10, letterSpacing:"1px", textTransform:"uppercase" } }, "Vigencia"),
+          e('div', { style:{ color:"#a8d5b5", fontSize:13, fontWeight:600, marginTop:3 } },
+            new Date().toLocaleDateString("es-AR", {month:"short", year:"numeric"}).toUpperCase()
+          )
+        )
+      )
+    ),
+    e('button', { onClick:onEntrar, style:{
+      position:"relative", zIndex:1,
+      background:"#a8d5b5", color:"#1e3a2a",
+      border:"none", borderRadius:14, padding:"16px 0",
+      fontSize:15, fontWeight:700, cursor:"pointer",
+      fontFamily:"inherit", width:"100%", maxWidth:280
+    }}, "Ver catálogo →"),
+    e('div', { style:{ position:"relative", zIndex:1, color:"rgba(255,255,255,0.2)",
+      fontSize:10, marginTop:14 } }, "lylmacetas.com.ar")
+  );
+}
+
+// ─────────────────────────────────────────────
 // APP PRINCIPAL
 // ─────────────────────────────────────────────
 function App() {
@@ -1704,6 +1840,7 @@ function App() {
   // Si entró por link directo, ocultar botón volver al selector
   const linkDirecto = modoUrl !== "selector";
   const [pantalla, setPantalla] = useState(modoUrl);
+  const [showSplash, setShowSplash] = useState(() => ["mayorista","clientes"].includes(modoUrl));
   const [adminMode, setAdminMode] = useState(false);
   const [descCliente, setDescCliente] = useState(10);
   const [presupuestoRecuperado, setPresupuestoRecuperado] = useState(null);
@@ -1728,6 +1865,8 @@ function App() {
     return Object.values(map);
   },[productosMin,productosMay]);
 
+  if(showSplash && ["mayorista","clientes"].includes(pantalla))
+    return e(showSplash && pantalla==="mayorista" ? SplashMayorista : SplashClientes, { onEntrar:()=>setShowSplash(false) });
   if(pantalla==="selector")
     return e(PantallaSelector,{
       onSelect:p=>setPantalla(p),
