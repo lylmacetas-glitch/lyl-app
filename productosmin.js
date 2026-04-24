@@ -217,6 +217,7 @@ window.LYL_MIN = [
   { articulo: "Jardinera", medidas: "60x20x20", material: "Rotomoldeado", pintada: false, precio: 35200 },
   { articulo: "Jardinera", medidas: "80x27x30", material: "Rotomoldeado", pintada: false, precio: 73600 },
   { articulo: "Jardinera", medidas: "100x27x30", material: "Rotomoldeado", pintada: false, precio: 91500 },
+  { articulo: "Jardinera", medidas: "100x40x30", material: "Rotomoldeado", pintada: false, precio: 139700 },
   { articulo: "Van Gogh", medidas: "", material: "Rotomoldeado", pintada: false, precio: 24300 },
   { articulo: "Paris", medidas: "30cm", material: "Rotomoldeado", pintada: false, precio: 47700 },
   { articulo: "Paris", medidas: "44cm", material: "Rotomoldeado", pintada: false, precio: 55700 },

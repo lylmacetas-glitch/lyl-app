@@ -202,6 +202,7 @@ window.LYL_MAY = [
   { articulo: "Jardinera", medidas: "60x20x20", material: "Rotomoldeado", pintada: false, precio: 25600 },
   { articulo: "Jardinera", medidas: "80x27x30", material: "Rotomoldeado", pintada: false, precio: 53600 },
   { articulo: "Jardinera", medidas: "100x27x30", material: "Rotomoldeado", pintada: false, precio: 66700 },
+  { articulo: "Jardinera", medidas: "100x40x30", material: "Rotomoldeado", pintada: false, precio: 114500 },
   { articulo: "Paris", medidas: "30cm", material: "Rotomoldeado", pintada: false, precio: 34800 },
   { articulo: "Paris", medidas: "44cm", material: "Rotomoldeado", pintada: false, precio: 40600 },
   { articulo: "Misionera Texturada", medidas: "30cm", material: "Rotomoldeado", pintada: false, precio: 18200 },
