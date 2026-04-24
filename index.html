@@ -240,7 +240,8 @@ function Header({ modo, color, fecha, itemCount, vistaActual, onCambiarVista, on
 // ─────────────────────────────────────────────
 // FILTROS DE BÚSQUEDA (compartido)
 // ─────────────────────────────────────────────
-function Filtros({ buscar, setBuscar, material, setMaterial, pintada, setPintada, color, modo, precioMin, setPrecioMin, precioMax, setPrecioMax, onToggleVista, vistaActual, seccion, setSeccion }) {
+function Filtros({ buscar, setBuscar, material, setMaterial, pintada, setPintada, color, modo, precioMin, setPrecioMin, precioMax, setPrecioMax, onToggleVista, vistaActual }) {
+  const [seccion, setSeccion] = useState("macetas");
   const [mostrarPrecio, setMostrarPrecio] = useState(false);
   const mats = seccion === "macetas" ? MATERIALES_MACETAS : MATERIALES_INSUMOS;
 
@@ -676,7 +677,6 @@ function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
   const [buscar, setBuscar] = useState(buscarInicial);
   const [vistaGrilla, setVistaGrilla] = useState(false);
   const [expandidoKey, setExpandidoKey] = useState(null);
-  const [seccionCatalogo, setSeccionCatalogo] = useState("macetas");
   const [material, setMaterial] = useState("Todos");
   const [pintada, setPintada] = useState("Todos");
   const [descPct, setDescPct] = useState(0);
@@ -702,9 +702,8 @@ function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
     const mats = material==="Todos"
       ? (b ? MATERIALES_TODOS : MATERIALES_TODOS)
       : [material];
-    const matsPermitidos = seccionCatalogo==="macetas" ? MATERIALES_MACETAS : MATERIALES_INSUMOS;
     const filtrados = productos.filter(p=>{
-      const inMat = (material==="Todos" ? matsPermitidos.includes(p.material) : p.material===material);
+      const inMat = material==="Todos" || p.material===material;
       const tokens = b.split(/\s+/).filter(Boolean);
       const texto = (p.articulo + " " + p.medidas).toLowerCase();
       const inBuscar = !b || tokens.every(t => texto.includes(t));
@@ -793,7 +792,7 @@ function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
           )
         )
       ),
-      e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo:"minorista",precioMin,setPrecioMin,precioMax,setPrecioMax,onToggleVista:v=>{setVistaGrilla(v==="grilla");setExpandidoKey(null);},vistaActual:vistaGrilla?"grilla":"lista",seccion:seccionCatalogo,setSeccion:v=>{setSeccionCatalogo(v);setMaterial("Todos");}}),
+      e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo:"minorista",precioMin,setPrecioMin,precioMax,setPrecioMax,onToggleVista:v=>{setVistaGrilla(v==="grilla");setExpandidoKey(null);},vistaActual:vistaGrilla?"grilla":"lista"}),
       e('div', { style:{ padding:"0 14px 80px" } },
         grupos.length===0
           ? e('div',{style:{textAlign:"center",color:"#aaa",padding:40}},"Sin resultados")
@@ -954,9 +953,8 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
 
   const grupos = useMemo(()=>{
     const b2=buscar.toLowerCase();
-    const matsPermitidos2 = seccionCatalogo==="macetas" ? MATERIALES_MACETAS : MATERIALES_INSUMOS;
     const filtrados=productos.filter(p=>{
-      const inMat=material==="Todos" ? matsPermitidos2.includes(p.material) : p.material===material;
+      const inMat=material==="Todos"||p.material===material;
       const inB=!b2||p.articulo.toLowerCase().includes(b2)||p.medidas.toLowerCase().includes(b2);
       const inP=(p.material==="Fibrocemento"||p.material==="Fibra de Vidrio")||pintada==="Todos"||(pintada==="Pintada"&&p.pintada)||(pintada==="Sin pintar"&&!p.pintada);
       const pMin=precioMin?p.precio>=parseFloat(precioMin):true;
@@ -1057,7 +1055,7 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
 
   // CATALOGO VIEW
   const catalogo = e('div', null,
-    e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo,precioMin,setPrecioMin,precioMax,setPrecioMax,onToggleVista:v=>{setVistaGrilla(v==="grilla");setExpandidoKey(null);},vistaActual:vistaGrilla?"grilla":"lista",seccion:seccionCatalogo,setSeccion:v=>{setSeccionCatalogo(v);setMaterial("Todos");}}),
+    e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo,precioMin,setPrecioMin,precioMax,setPrecioMax,onToggleVista:v=>{setVistaGrilla(v==="grilla");setExpandidoKey(null);},vistaActual:vistaGrilla?"grilla":"lista"}),
     e('div', { style:{ padding:"0 14px 80px" } },
       grupos.length===0
         ?e('div',{style:{textAlign:"center",color:"#aaa",padding:40}},"Sin resultados")
@@ -1690,209 +1688,6 @@ function PanelRegistro({ onVolver, onRecuperar }) {
 
 
 
-// ─────────────────────────────────────────────
-// PANTALLA BIENVENIDA MAYORISTA
-// ─────────────────────────────────────────────
-function SplashMayorista({ onEntrar }) {
-  return e('div', { style:{
-    minHeight:"100vh", background:"#1a3344",
-    display:"flex", flexDirection:"column",
-    alignItems:"center", justifyContent:"center",
-    padding:"40px 28px", position:"relative", overflow:"hidden",
-    fontFamily:"inherit"
-  }},
-    // Decoración marca — líneas geométricas azul/verde
-    e('svg', { style:{ position:"absolute", top:0, left:0, width:"100%", height:"100%",
-        opacity:0.07, pointerEvents:"none" },
-        viewBox:"0 0 400 700", xmlns:"http://www.w3.org/2000/svg" },
-      // Prisma arriba izquierda
-      e('polygon', { points:"20,40 80,20 100,60 60,100 0,80", stroke:"#fff", strokeWidth:1.2, fill:"none" }),
-      // Línea vertical derecha
-      e('line', { x1:"380", y1:"100", x2:"380", y2:"340", stroke:"#fff", strokeWidth:1 }),
-      e('line', { x1:"370", y1:"100", x2:"390", y2:"100", stroke:"#fff", strokeWidth:1 }),
-      e('line', { x1:"370", y1:"340", x2:"390", y2:"340", stroke:"#fff", strokeWidth:1 }),
-      // Cuadrado centro derecha
-      e('rect', { x:"320", y:"200", width:"60", height:"60", stroke:"#fff", strokeWidth:1, fill:"none" }),
-      // Maceta hexagonal arriba derecha
-      e('polygon', { points:"330,30 360,47 360,80 330,97 300,80 300,47",
-        stroke:"#fff", strokeWidth:1.2, fill:"none" }),
-      e('line', { x1:"300", y1:"63", x2:"360", y2:"63", stroke:"#fff", strokeWidth:0.7 }),
-      e('line', { x1:"315", y1:"47", x2:"330", y2:"63", stroke:"#fff", strokeWidth:0.7 }),
-      e('line', { x1:"345", y1:"47", x2:"330", y2:"63", stroke:"#fff", strokeWidth:0.7 }),
-      // Hoja abajo izquierda
-      e('path', { d:"M20 600 Q70 550 100 600 Q70 650 20 600Z", stroke:"#fff", strokeWidth:1.2, fill:"none" }),
-      e('line', { x1:"60", y1:"600", x2:"60", y2:"640", stroke:"#fff", strokeWidth:0.8 }),
-      e('line', { x1:"40", y1:"615", x2:"80", y2:"615", stroke:"#fff", strokeWidth:0.7 }),
-      // Hoja pequeña izq arriba
-      e('path', { d:"M30 180 Q70 140 90 180 Q60 220 30 180Z", stroke:"#fff", strokeWidth:1, fill:"none" }),
-      e('line', { x1:"60", y1:"180", x2:"60", y2:"210", stroke:"#fff", strokeWidth:0.7 }),
-      // Círculo abajo derecha
-      e('circle', { cx:"360", cy:"640", r:"35", stroke:"#fff", strokeWidth:1, fill:"none" }),
-    ),
-
-    // Logo
-    e('div', { style:{ position:"relative", zIndex:1, marginBottom:36, textAlign:"center" } },
-      e('img', { src:"https://www.lylmacetas.com.ar/wp-content/uploads/2022/02/logo-02.svg",
-        alt:"LyL Macetas",
-        style:{ height:56, filter:"brightness(0) invert(1)", display:"block", margin:"0 auto 14px" },
-        onError:ev=>{ ev.target.style.display="none"; }
-      }),
-      e('div', { style:{ color:"rgba(255,255,255,0.35)", fontSize:10, letterSpacing:"3px", textTransform:"uppercase" } },
-        "Contenedores de naturaleza"
-      )
-    ),
-
-    // Card mayorista — azul profundo
-    e('div', { style:{
-      position:"relative", zIndex:1,
-      background:"rgba(255,255,255,0.06)",
-      border:"1px solid rgba(255,255,255,0.12)",
-      borderRadius:18, padding:"28px 32px",
-      width:"100%", maxWidth:300, marginBottom:36, textAlign:"center"
-    }},
-      e('div', { style:{ fontSize:13, letterSpacing:"3px", textTransform:"uppercase",
-        color:"rgba(255,255,255,0.4)", marginBottom:12 } }, "Canal"),
-      e('div', { style:{ fontSize:28, fontWeight:700, color:"#fff", marginBottom:6,
-        letterSpacing:"-0.5px" } }, "📦 Mayorista"),
-      e('div', { style:{ height:1, background:"rgba(255,255,255,0.08)", margin:"18px 0" } }),
-      e('div', { style:{ display:"flex", justifyContent:"space-around" } },
-        e('div', { style:{ textAlign:"center" } },
-          e('div', { style:{ color:"rgba(255,255,255,0.35)", fontSize:10, letterSpacing:"1px", textTransform:"uppercase" } }, "Precios"),
-          e('div', { style:{ color:"#7ec8e3", fontSize:13, fontWeight:600, marginTop:3 } }, "Contado")
-        ),
-        e('div', { style:{ textAlign:"center" } },
-          e('div', { style:{ color:"rgba(255,255,255,0.35)", fontSize:10, letterSpacing:"1px", textTransform:"uppercase" } }, "Lista"),
-          e('div', { style:{ color:"#7ec8e3", fontSize:13, fontWeight:600, marginTop:3 } },
-            new Date().toLocaleDateString("es-AR", {month:"short", year:"numeric"}).toUpperCase()
-          )
-        )
-      )
-    ),
-
-    e('button', { onClick:onEntrar, style:{
-      position:"relative", zIndex:1,
-      background:"#7ec8e3", color:"#1a3344",
-      border:"none", borderRadius:14, padding:"16px 0",
-      fontSize:15, fontWeight:700, cursor:"pointer",
-      fontFamily:"inherit", width:"100%", maxWidth:280, letterSpacing:"0.3px"
-    }}, "Ver lista mayorista →"),
-
-    e('div', { style:{ position:"relative", zIndex:1, color:"rgba(255,255,255,0.18)",
-      fontSize:10, marginTop:14, letterSpacing:1 } },
-      "lylmacetas.com.ar"
-    )
-  );
-}
-
-// ─────────────────────────────────────────────
-// PANTALLA BIENVENIDA CLIENTES
-// ─────────────────────────────────────────────
-function SplashClientes({ onEntrar }) {
-  return e('div', { style:{
-    minHeight:"100vh", background:"#1e3a2a",
-    display:"flex", flexDirection:"column",
-    alignItems:"center", justifyContent:"center",
-    padding:"40px 28px", position:"relative", overflow:"hidden",
-    fontFamily:"inherit"
-  }},
-    // Decoración marca — hojas + macetas verdes
-    e('svg', { style:{ position:"absolute", top:0, left:0, width:"100%", height:"100%",
-        opacity:0.08, pointerEvents:"none" },
-        viewBox:"0 0 400 700", xmlns:"http://www.w3.org/2000/svg" },
-      // Hoja grande arriba izquierda
-      e('path', { d:"M-10 90 Q50 20 110 70 Q70 140 -10 90Z", stroke:"#fff", strokeWidth:1.5, fill:"none" }),
-      e('line', { x1:"50", y1:"55", x2:"50", y2:"110", stroke:"#fff", strokeWidth:1 }),
-      e('line', { x1:"25", y1:"75", x2:"75", y2:"75", stroke:"#fff", strokeWidth:0.8 }),
-      e('line', { x1:"30", y1:"92", x2:"70", y2:"92", stroke:"#fff", strokeWidth:0.7 }),
-      // Hoja chica arriba centro
-      e('path', { d:"M160 30 Q200 -5 230 30 Q200 65 160 30Z", stroke:"#fff", strokeWidth:1.2, fill:"none" }),
-      e('line', { x1:"195", y1:"15", x2:"195", y2:"55", stroke:"#fff", strokeWidth:0.8 }),
-      // Maceta hexagonal arriba derecha grande
-      e('polygon', { points:"320,20 365,44 365,92 320,116 275,92 275,44",
-        stroke:"#fff", strokeWidth:1.5, fill:"none" }),
-      e('line', { x1:"275", y1:"68", x2:"365", y2:"68", stroke:"#fff", strokeWidth:0.8 }),
-      e('line', { x1:"297", y1:"44", x2:"320", y2:"68", stroke:"#fff", strokeWidth:0.8 }),
-      e('line', { x1:"343", y1:"44", x2:"320", y2:"68", stroke:"#fff", strokeWidth:0.8 }),
-      // Maceta hexagonal pequeña centro izq
-      e('polygon', { points:"30,350 55,363 55,390 30,403 5,390 5,363",
-        stroke:"#fff", strokeWidth:1.2, fill:"none" }),
-      // Hoja abajo derecha
-      e('path', { d:"M350 580 Q400 530 430 580 Q400 630 350 580Z", stroke:"#fff", strokeWidth:1.2, fill:"none" }),
-      e('line', { x1:"390", y1:"555", x2:"390", y2:"610", stroke:"#fff", strokeWidth:0.8 }),
-      // Hoja abajo izquierda
-      e('path', { d:"M20 640 Q60 600 80 640 Q55 680 20 640Z", stroke:"#fff", strokeWidth:1, fill:"none" }),
-      // Círculo decorativo derecha medio
-      e('circle', { cx:"390", cy:"340", r:"30", stroke:"#fff", strokeWidth:1, fill:"none" }),
-    ),
-
-    // Logo
-    e('div', { style:{ position:"relative", zIndex:1, marginBottom:36, textAlign:"center" } },
-      e('img', { src:"https://www.lylmacetas.com.ar/wp-content/uploads/2022/02/logo-02.svg",
-        alt:"LyL Macetas",
-        style:{ height:56, filter:"brightness(0) invert(1)", display:"block", margin:"0 auto 14px" },
-        onError:ev=>{ ev.target.style.display="none"; }
-      }),
-      e('div', { style:{ color:"rgba(255,255,255,0.35)", fontSize:10, letterSpacing:"3px", textTransform:"uppercase" } },
-        "Contenedores de naturaleza"
-      )
-    ),
-
-    // Card clientes — verde natural
-    e('div', { style:{
-      position:"relative", zIndex:1,
-      background:"rgba(255,255,255,0.06)",
-      border:"1px solid rgba(255,255,255,0.12)",
-      borderRadius:18, padding:"28px 32px",
-      width:"100%", maxWidth:300, marginBottom:36, textAlign:"center"
-    }},
-      e('div', { style:{ fontSize:13, letterSpacing:"3px", textTransform:"uppercase",
-        color:"rgba(255,255,255,0.4)", marginBottom:12 } }, "Nuestros precios"),
-      e('div', { style:{ fontSize:26, fontWeight:700, color:"#fff", marginBottom:6,
-        lineHeight:1.2 } }, "🌿 Lista de"),
-      e('div', { style:{ fontSize:26, fontWeight:700, color:"#a8d5b5", marginBottom:2,
-        lineHeight:1.2 } }, "Precios"),
-      e('div', { style:{ color:"rgba(255,255,255,0.35)", fontSize:12, marginTop:6 } },
-        "Macetas · Plantas · Insumos"
-      ),
-      e('div', { style:{ height:1, background:"rgba(255,255,255,0.08)", margin:"18px 0" } }),
-      e('div', { style:{ display:"flex", justifyContent:"space-around" } },
-        e('div', { style:{ textAlign:"center" } },
-          e('div', { style:{ color:"rgba(255,255,255,0.35)", fontSize:10, letterSpacing:"1px", textTransform:"uppercase" } }, "Precios"),
-          e('div', { style:{ color:"#a8d5b5", fontSize:13, fontWeight:600, marginTop:3 } }, "Contado")
-        ),
-        e('div', { style:{ textAlign:"center" } },
-          e('div', { style:{ color:"rgba(255,255,255,0.35)", fontSize:10, letterSpacing:"1px", textTransform:"uppercase" } }, "Vigencia"),
-          e('div', { style:{ color:"#a8d5b5", fontSize:13, fontWeight:600, marginTop:3 } },
-            new Date().toLocaleDateString("es-AR", {month:"short", year:"numeric"}).toUpperCase()
-          )
-        )
-      )
-    ),
-
-    e('button', { onClick:onEntrar, style:{
-      position:"relative", zIndex:1,
-      background:"#a8d5b5", color:"#1e3a2a",
-      border:"none", borderRadius:14, padding:"16px 0",
-      fontSize:15, fontWeight:700, cursor:"pointer",
-      fontFamily:"inherit", width:"100%", maxWidth:280, letterSpacing:"0.3px"
-    }}, "Ver catálogo →"),
-
-    e('div', { style:{ position:"relative", zIndex:1, color:"rgba(255,255,255,0.18)",
-      fontSize:10, marginTop:14, letterSpacing:1 } },
-      "lylmacetas.com.ar"
-    )
-  );
-}
-
-// ─────────────────────────────────────────────
-// SPLASH ROUTER
-// ─────────────────────────────────────────────
-function PantallaBienvenida({ modo, onEntrar }) {
-  if (modo === "mayorista") return e(SplashMayorista, { onEntrar });
-  if (modo === "clientes")  return e(SplashClientes,  { onEntrar });
-  return null;
-}
-
 
 // ─────────────────────────────────────────────
 // APP PRINCIPAL
@@ -1909,7 +1704,6 @@ function App() {
   // Si entró por link directo, ocultar botón volver al selector
   const linkDirecto = modoUrl !== "selector";
   const [pantalla, setPantalla] = useState(modoUrl);
-  const [showSplash, setShowSplash] = useState(() => ["mayorista","clientes"].includes(modoUrl));
   const [adminMode, setAdminMode] = useState(false);
   const [descCliente, setDescCliente] = useState(10);
   const [presupuestoRecuperado, setPresupuestoRecuperado] = useState(null);
@@ -1934,8 +1728,6 @@ function App() {
     return Object.values(map);
   },[productosMin,productosMay]);
 
-  if(showSplash && ["mayorista","clientes"].includes(pantalla))
-    return e(PantallaBienvenida, { modo:pantalla, onEntrar:()=>setShowSplash(false) });
   if(pantalla==="selector")
     return e(PantallaSelector,{
       onSelect:p=>setPantalla(p),
