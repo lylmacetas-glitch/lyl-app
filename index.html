@@ -763,7 +763,9 @@ function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
     if(descPct>0) txt+=`\n🏷 Descuento solicitado: ${descPct}%\n`;
     if(direccion.trim()) txt+=`\n📍 *Dirección:* ${direccion.trim()}\n`;
     if(nota.trim()) txt+=`\n📝 *Nota:* ${nota.trim()}\n`;
-    txt+=`\n_Consulta enviada desde lylmacetas.com.ar_`;
+    if(descPct>0) txt+=`\n💚 *Precio con ${descPct}% OFF por transferencia/efectivo*`;
+    else txt+=`\n💚 *Precio especial pagando por transferencia*\n_Consultanos tu descuento por pago anticipado_`;
+    txt+=`\n_Con tarjeta según condiciones del banco_ 💳`;
     window.open(`https://wa.me/${WA}?text=${encodeURIComponent(txt)}`,"_blank");
     agregarRegistro({
       tipo: 'minorista',
@@ -904,7 +906,7 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
       g.items.forEach(i => { txt += `  ▫️ ${i.medidas} — $${Math.round(i.precio).toLocaleString("es-AR")}\n`; });
       txt += "\n";
     });
-    txt += "_Precios de contado. Con tarjeta según condiciones del banco._";
+    txt += "💚 *Precio especial pagando por transferencia*\n_Consultanos tu descuento por pago anticipado_\n_Con tarjeta según condiciones del banco_ 💳";
     window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank");
   };
   const [material, setMaterial] = useState("Todos");
@@ -1007,6 +1009,15 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
     if(envioNum>0) t+=`\n🚚 Envío: ${fmt(envioNum)}`;
     t+=`\n\n*TOTAL: ${fmt(totalFinal)}*`;
     if(mostrarAnticipo) t+=`\n\n_Anticipo 80%: ${fmt(anticipo80)}_\n_Saldo: ${fmt(saldo20)}_`;
+    t+="\n\n";
+    if(descPct>0){
+      t+=`💚 *Precio incluye ${descPct}% OFF por pago anticipado*\n`;
+      t+=`_Válido abonando por transferencia antes de la entrega_\n`;
+    } else {
+      t+=`💚 *Precio especial pagando por transferencia*\n`;
+      t+=`_Consultanos tu descuento por pago anticipado_\n`;
+    }
+    t+=`_Con tarjeta según condiciones de financiación del banco_ 💳`;
     return t;
   };
 
