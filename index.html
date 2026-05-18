@@ -1899,16 +1899,16 @@ function App() {
     return e(PanelRegistro,{
       onVolver:()=>setPantalla("selector"),
       onRecuperar:(r)=>{
-        setPresupuestoRecuperado(r);
+        setPresupuestoRecuperado({...r, _ts: Date.now()});
         setPantalla(r.tipo==="clientes"?"clientes":"mayorista");
       }
     });
   if(pantalla==="minorista")
     return e(ModoMinorista,{productos:productosMin,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode,buscarInicial:buscarUrl});
   if(pantalla==="mayorista")
-    return e(Presupuestador,{modo:"mayorista",productos:productosMay,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode,buscarInicial:buscarUrl});
+    return e(Presupuestador,{key:presupuestoRecuperado?._ts||"default",modo:"mayorista",productos:productosMay,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode,buscarInicial:buscarUrl,presupuestoInicial:presupuestoRecuperado,onPresupuestoInicial:()=>setPresupuestoRecuperado(null)});
   if(pantalla==="clientes")
-    return e(Presupuestador,{modo:"clientes",productos:productosMin,descFijo:descCliente,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode,buscarInicial:buscarUrl});
+    return e(Presupuestador,{key:presupuestoRecuperado?._ts||"default",modo:"clientes",productos:productosMin,descFijo:descCliente,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode,buscarInicial:buscarUrl,presupuestoInicial:presupuestoRecuperado,onPresupuestoInicial:()=>setPresupuestoRecuperado(null)});
   return null;
 }
 
