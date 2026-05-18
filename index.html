@@ -871,11 +871,10 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
   const descOpciones = modo==="mayorista" ? DESCUENTOS_MAY : [0,5,10,15,20];
   const storageKey = modo==="mayorista" ? STORAGE_KEY_MAY : STORAGE_KEY_CLI;
 
-  const b = loadLS(storageKey) || {};
+  const b = presupuestoInicial ? {} : (loadLS(storageKey) || {});
   const [vista, setVista] = useState(()=> presupuestoInicial?.items?.length ? "presupuesto" : "catalogo");
   React.useEffect(()=>{
     if (presupuestoInicial && onPresupuestoInicial) {
-      if (presupuestoInicial.descuento_pct) setDescuento(String(presupuestoInicial.descuento_pct));
       onPresupuestoInicial();
     }
   },[]);
@@ -924,14 +923,14 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
   const [cliente, setCliente] = useState(presupuestoInicial?.cliente||b.cliente||"");
   const [proyecto, setProyecto] = useState(presupuestoInicial?.proyecto||b.proyecto||"");
   const [envio, setEnvio] = useState(b.envio||"");
-  const [descuento, setDescuento] = useState(b.descuento ?? (descFijo!==null?descFijo:0));
+  const [descuento, setDescuento] = useState(presupuestoInicial?.descuento_pct ?? b.descuento ?? (descFijo!==null?descFijo:0));
   const [mostrarAnticipo, setMostrarAnticipo] = useState(b.mostrarAnticipo??true);
   const [textoVis, setTextoVis] = useState(null);
   const [notaAb, setNotaAb] = useState(null);
   const [notaTemp, setNotaTemp] = useState("");
   const [modalMan, setModalMan] = useState(false);
   const [formMan, setFormMan] = useState({articulo:"",medidas:"",precio:"",nota:"",material:"Otros"});
-  const [numPresup, setNumPresup] = useState(b.numPresup||"");
+  const [numPresup, setNumPresup] = useState(presupuestoInicial?.numero || b.numPresup||"");
   const [confirmarVaciar, setConfirmarVaciar] = useState(false);
 
   const save = useCallback((extra={})=>{
