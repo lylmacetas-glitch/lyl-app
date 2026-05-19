@@ -692,13 +692,6 @@ function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
   const [nombre, setNombre] = useState("");
   const [nota, setNota] = useState("");
   const [direccion, setDireccion] = useState("");
-  const [vista, setVista] = useState(()=> presupuestoInicial?.items?.length ? "presupuesto" : "catalogo");
-  React.useEffect(()=>{
-    if (presupuestoInicial && onPresupuestoInicial) {
-      if (presupuestoInicial.descuento_pct) setDescuento(String(presupuestoInicial.descuento_pct));
-      onPresupuestoInicial();
-    }
-  },[]);
   const [enviado, setEnviado] = useState(false);
 
   const totalItems = Object.values(carrito).reduce((s,v)=>s+v.cantidad,0);
@@ -874,9 +867,12 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
   const b = presupuestoInicial ? {} : (loadLS(storageKey) || {});
   const [vista, setVista] = useState(()=> presupuestoInicial?.items?.length ? "presupuesto" : "catalogo");
   React.useEffect(()=>{
+    // Clear the recovered presupuesto after a short delay to allow render
     if (presupuestoInicial && onPresupuestoInicial) {
-      onPresupuestoInicial();
+      const t = setTimeout(()=>onPresupuestoInicial(), 500);
+      return ()=>clearTimeout(t);
     }
+  // eslint-disable-next-line
   },[]);
   const [buscar, setBuscar] = useState(buscarInicial||"");
   const [vistaGrilla, setVistaGrilla] = useState(false);
