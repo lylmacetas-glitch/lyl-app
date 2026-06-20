@@ -360,10 +360,57 @@ function getFotos(articulo, material) {
 
 
 
+
+// ─────────────────────────────────────────────
+// SELECTOR DE CATEGORÍAS (puerta de entrada visual)
+// ─────────────────────────────────────────────
+const CATEGORIA_ICONOS = {
+  "Fibrocemento": "🧱", "Rotomoldeado": "⚪", "Fibra de Vidrio": "💧",
+  "Barro": "🏺", "Barro Artesanal": "🏺", "Cerámica": "🍶", "Plástico": "♻️"
+};
+
+function CategoriaSelector({ productos, color, onSelect }) {
+  const categorias = useMemo(()=>{
+    const map = {};
+    productos.forEach(p=>{
+      if (!MATERIALES_MACETAS.includes(p.material)) return;
+      if (!map[p.material]) map[p.material] = new Set();
+      map[p.material].add(p.articulo);
+    });
+    return MATERIALES_MACETAS
+      .filter(m=>map[m] && map[m].size>0)
+      .map(m=>({ material:m, count:map[m].size, foto:(getFotos(Array.from(map[m])[0], m)[0])||null }));
+  },[productos]);
+
+  if (categorias.length===0) return null;
+
+  return e('div', { style:{ padding:"4px 14px 80px" } },
+    e('div', { style:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 } },
+      categorias.map(c =>
+        e('div', { key:c.material, onClick:()=>onSelect(c.material),
+            style:{ background:"#fff", borderRadius:14, border:"1px solid #e8e4de",
+              overflow:"hidden", cursor:"pointer", textAlign:"center",
+              boxShadow:"0 1px 4px rgba(0,0,0,0.06)" } },
+          c.foto
+            ? e('img', { src:c.foto, alt:c.material,
+                style:{ width:"100%", aspectRatio:"1.3", objectFit:"cover", display:"block", background:"#f5f3ef" },
+                onError:ev=>{ev.target.style.display="none";} })
+            : e('div', { style:{ width:"100%", aspectRatio:"1.3", background:"linear-gradient(135deg,#f5f3ef,#e8e4de)",
+                display:"flex", alignItems:"center", justifyContent:"center", fontSize:34 } }, CATEGORIA_ICONOS[c.material]||"🪴"),
+          e('div', { style:{ padding:"10px 8px 12px" } },
+            e('div', { style:{ fontWeight:700, fontSize:14, color:"#1a1a1a" } }, c.material),
+            e('div', { style:{ fontSize:11, color:"#999", marginTop:2 } }, `${c.count} modelo${c.count===1?"":"s"}`)
+          )
+        )
+      )
+    )
+  );
+}
+
 // ─────────────────────────────────────────────
 // CARD GRILLA (vista 2 columnas)
 // ─────────────────────────────────────────────
-function CardGrilla({ grupo, onAgregar, descPct=0, modo, adminMode=false, expandido, onToggle }) {
+function CardGrilla({ grupo, onAgregar, descPct=0, modo, adminMode=false, expandido, onToggle, compartirSel={}, toggleCompartir=null }) {
   const color = MODOS[modo]?.color || "#333";
   const dc = MAT_COLORS[grupo.material] || "#888";
   const fotos = getFotos(grupo.articulo, grupo.material);
@@ -427,6 +474,24 @@ function CardGrilla({ grupo, onAgregar, descPct=0, modo, adminMode=false, expand
             e('span', { style:{ fontSize:11, color:"#999" } }, grupo.material)
           )
         ),
+        toggleCompartir && e('button', {
+          onClick:ev=>{
+            ev.stopPropagation();
+            const key = grupo.articulo + "||" + grupo.material;
+            const yaSelec = grupo.variantes.some(v => compartirSel[key + "||" + v.medidas]);
+            grupo.variantes.forEach(v => {
+              const k = key + "||" + v.medidas;
+              const pf = grupo.material==="Fibrocemento" && v.acabados
+                ? (v.min_cruda||v.may_cruda||v.precio)
+                : (descPct > 0 ? pct(v.precio, descPct) : v.precio);
+              if (yaSelec && compartirSel[k]) toggleCompartir(k, grupo, v, pf);
+              else if (!yaSelec && !compartirSel[k]) toggleCompartir(k, grupo, v, pf);
+            });
+          },
+          style:{ fontSize:11, padding:"4px 9px", borderRadius:8,
+            border:`1px solid ${color}`, background:"transparent",
+            color, fontWeight:600, whiteSpace:"nowrap", flexShrink:0, marginRight:4 }
+        }, "+ sel."),
         e('button', { onClick:onToggle,
           style:{ padding:"5px 10px", borderRadius:8,
             border:"1px solid #ddd", background:"transparent",
@@ -474,23 +539,36 @@ function CardGrilla({ grupo, onAgregar, descPct=0, modo, adminMode=false, expand
       // Variantes
       grupo.variantes.map((v, vi) => {
         if (grupo.material === "Fibrocemento" && v.acabados) {
-          return e(VarianteFibro, { key:vi, v, grupo, descPct, pct, fmt, color, onAgregar, adminMode });
+          return e(VarianteFibro, { key:vi, v, grupo, descPct, pct, fmt, color, onAgregar, adminMode, compartirSel, toggleCompartir });
         }
         const precioFinal = descPct > 0 ? pct(v.precio, descPct) : v.precio;
+        const cKey = `${grupo.articulo}||${grupo.material}||${v.medidas}`;
+        const seleccionado = compartirSel[cKey];
         return e('div', { key:vi, style:{
             padding:"9px 12px",
             borderBottom: vi < grupo.variantes.length-1 ? "1px solid #f5f3ef" : "none",
-            display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 } },
+            display:"flex", justifyContent:"space-between", alignItems:"center", gap:8,
+            background: seleccionado ? "#f0fff4" : "transparent" } },
           e('div', null,
             e('div', { style:{ fontSize:12, fontWeight:600, color:"#444" } }, v.medidas || "—"),
             e('div', { style:{ fontSize:14, fontWeight:700, color, marginTop:1 } }, fmt(precioFinal))
           ),
-          e('button', {
-            onClick:()=>onAgregar(grupo, v, precioFinal),
-            style:{ padding:"6px 12px", borderRadius:8, border:"none",
-              background:color, color:"#fff", fontSize:12, fontWeight:600,
-              cursor:"pointer", whiteSpace:"nowrap" }
-          }, "+ Agregar")
+          e('div', { style:{ display:"flex", gap:5, alignItems:"center", flexShrink:0 } },
+            toggleCompartir && e('button', {
+              onClick:()=>toggleCompartir(cKey, grupo, v, precioFinal),
+              style:{ width:26, height:26, borderRadius:6, border:"1px solid #ddd",
+                background: seleccionado ? "#25D366" : "#fff",
+                color: seleccionado ? "#fff" : "#aaa",
+                fontSize:14, display:"flex", alignItems:"center", justifyContent:"center",
+                cursor:"pointer", flexShrink:0 }
+            }, seleccionado ? "✓" : "□"),
+            e('button', {
+              onClick:()=>onAgregar(grupo, v, precioFinal),
+              style:{ padding:"6px 12px", borderRadius:8, border:"none",
+                background:color, color:"#fff", fontSize:12, fontWeight:600,
+                cursor:"pointer", whiteSpace:"nowrap" }
+            }, "+ Agregar")
+          )
         );
       })
     )
@@ -681,7 +759,7 @@ function ProductoCard({ grupo, onAgregar, descPct=0, modo, adminMode=false, comp
 function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
   const color = MODOS.minorista.color;
   const [buscar, setBuscar] = useState(buscarInicial);
-  const [vistaGrilla, setVistaGrilla] = useState(false);
+  const [vistaGrilla, setVistaGrilla] = useState(true);
   const [expandidoKey, setExpandidoKey] = useState(null);
   const [material, setMaterial] = useState("Todos");
   const [pintada, setPintada] = useState("Todos");
@@ -796,17 +874,25 @@ function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
         )
       ),
       e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo:"minorista",precioMin,setPrecioMin,precioMax,setPrecioMax,onToggleVista:v=>{setVistaGrilla(v==="grilla");setExpandidoKey(null);},vistaActual:vistaGrilla?"grilla":"lista"}),
-      e('div', { style:{ padding:"0 14px 80px" } },
+      ((material==="Todos"||material==="__MACETAS__") && !buscar && vistaGrilla)
+        ? e(CategoriaSelector,{productos,color,onSelect:m=>setMaterial(m)})
+        : e('div', { style:{ padding:"0 14px 80px" } },
         grupos.length===0
           ? e('div',{style:{textAlign:"center",color:"#aaa",padding:40}},"Sin resultados")
           : vistaGrilla
-          ? e('div', { style:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 0 10px" } },
-              grupos.map((g,i) => {
-                const gKey = g.articulo+"||"+g.material;
-                return e(CardGrilla,{key:i,grupo:g,onAgregar:agregar,descPct,modo:"minorista",adminMode,
-                  expandido:expandidoKey===gKey,
-                  onToggle:()=>setExpandidoKey(expandidoKey===gKey?null:gKey)});
-              })
+          ? e('div', null,
+              (material!=="Todos"&&material!=="__MACETAS__") && e('button', { onClick:()=>setMaterial("Todos"),
+                  style:{ display:"flex", alignItems:"center", gap:5, background:"transparent",
+                    border:"none", color, fontSize:13, fontWeight:600, padding:"4px 0 10px", cursor:"pointer" } },
+                "← Categorías"),
+              e('div', { style:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 0 10px" } },
+                grupos.map((g,i) => {
+                  const gKey = g.articulo+"||"+g.material;
+                  return e(CardGrilla,{key:i,grupo:g,onAgregar:agregar,descPct,modo:"minorista",adminMode,
+                    expandido:expandidoKey===gKey,
+                    onToggle:()=>setExpandidoKey(expandidoKey===gKey?null:gKey)});
+                })
+              )
             )
           : grupos.map((g,i)=>e(ProductoCard,{key:i,grupo:g,onAgregar:agregar,descPct,modo:"minorista",adminMode}))
       )
@@ -875,7 +961,7 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
   // eslint-disable-next-line
   },[]);
   const [buscar, setBuscar] = useState(buscarInicial||"");
-  const [vistaGrilla, setVistaGrilla] = useState(false);
+  const [vistaGrilla, setVistaGrilla] = useState(true);
   const [expandidoKey, setExpandidoKey] = useState(null);
   const [compartirSel, setCompartirSel] = useState({});
   const toggleCompartir = (key, grupo, v, precio) => {
@@ -1072,17 +1158,26 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
   // CATALOGO VIEW
   const catalogo = e('div', null,
     e(Filtros,{buscar,setBuscar,material,setMaterial,pintada,setPintada,color,modo,precioMin,setPrecioMin,precioMax,setPrecioMax,onToggleVista:v=>{setVistaGrilla(v==="grilla");setExpandidoKey(null);},vistaActual:vistaGrilla?"grilla":"lista"}),
-    e('div', { style:{ padding:"0 14px 80px" } },
+    ((material==="Todos"||material==="__MACETAS__") && !buscar && vistaGrilla)
+      ? e(CategoriaSelector,{productos,color,onSelect:m=>setMaterial(m)})
+      : e('div', { style:{ padding:"0 14px 80px" } },
       grupos.length===0
         ?e('div',{style:{textAlign:"center",color:"#aaa",padding:40}},"Sin resultados")
         :vistaGrilla
-          ? e('div', { style:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 0 10px" } },
-              grupos.map((g,i) => {
-                const gKey = g.articulo+"||"+g.material;
-                return e(CardGrilla,{key:i,grupo:g,onAgregar:agregar,descPct:0,modo,adminMode,
-                  expandido:expandidoKey===gKey,
-                  onToggle:()=>setExpandidoKey(expandidoKey===gKey?null:gKey)});
-              })
+          ? e('div', null,
+              (material!=="Todos"&&material!=="__MACETAS__") && e('button', { onClick:()=>setMaterial("Todos"),
+                  style:{ display:"flex", alignItems:"center", gap:5, background:"transparent",
+                    border:"none", color, fontSize:13, fontWeight:600, padding:"4px 0 10px", cursor:"pointer" } },
+                "← Categorías"),
+              e('div', { style:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 0 10px" } },
+                grupos.map((g,i) => {
+                  const gKey = g.articulo+"||"+g.material;
+                  return e(CardGrilla,{key:i,grupo:g,onAgregar:agregar,descPct:0,modo,adminMode,
+                    expandido:expandidoKey===gKey,
+                    onToggle:()=>setExpandidoKey(expandidoKey===gKey?null:gKey),
+                    compartirSel,toggleCompartir});
+                })
+              )
             )
           : grupos.map((g,i)=>e(ProductoCard,{key:i,grupo:g,onAgregar:agregar,descPct:0,modo,adminMode,
               compartirSel,toggleCompartir})),
