@@ -396,6 +396,7 @@ window.LYL_MIN = [
   { articulo: "Salteña", medidas: "65altx50bocx25bas", material: "Fibrocemento", acabados: "all", precio: 45200, min_cruda: 45200, min_imp: 74000, min_pint: 80200 },
   { articulo: "Salteña", medidas: "50altx65bocx32bas", material: "Fibrocemento", acabados: "all", precio: 69200, min_cruda: 69200, min_imp: 113300, min_pint: 122700 },
   { articulo: "Salteña", medidas: "77altx65bocx32bas", material: "Fibrocemento", acabados: "all", precio: 83000, min_cruda: 83000, min_imp: 135800, min_pint: 147100 },
+  { articulo: "Salteña", medidas: "55altx50bocx35bas", material: "Fibrocemento", acabados: "all", precio: 32200, min_cruda: 32200, min_imp: 52800, min_pint: 57300 },
   { articulo: "Copa", medidas: "40altx33bocx16bas", material: "Fibrocemento", acabados: "all", precio: 16100, min_cruda: 16100, min_imp: 26400, min_pint: 28600 },
   { articulo: "Copa", medidas: "55altx45bocx28bas", material: "Fibrocemento", acabados: "all", precio: 32200, min_cruda: 32200, min_imp: 52700, min_pint: 57100 },
   { articulo: "Copa", medidas: "70altx50bocx28bas", material: "Fibrocemento", acabados: "all", precio: 70100, min_cruda: 70100, min_imp: 114700, min_pint: 124300 },
@@ -856,4 +857,10 @@ window.LYL_MIN = [
   { articulo: "Cuadrada", medidas: "N°2 (8h×28d×18b)", material: "Cerámica", pintada: false, precio: 45000 },
   { articulo: "Kokedama", medidas: "Chica (10h×15d×5b)", material: "Cerámica", pintada: false, precio: 26800 },
   { articulo: "Kokedama", medidas: "Grande (15h×23d×11b)", material: "Cerámica", pintada: false, precio: 45000 },
+
+
+  // ── PAILA ROTOMOLDEADA ──
+  { articulo: "Paila", medidas: "Chica 35×10", material: "Rotomoldeado", pintada: false, precio: 30200 },
+  { articulo: "Paila", medidas: "Mediana 45×13", material: "Rotomoldeado", pintada: false, precio: 48700 },
+  { articulo: "Paila", medidas: "Grande 52×14", material: "Rotomoldeado", pintada: false, precio: 55700 },
 ];
