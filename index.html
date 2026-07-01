@@ -987,7 +987,9 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
       g.items.forEach(i => { txt += `  ▫️ ${i.medidas} — $${Math.round(i.precio).toLocaleString("es-AR")}\n`; });
       txt += "\n";
     });
-    txt += "💚 *Precio especial pagando por transferencia*\n_Consultanos tu descuento por pago anticipado_\n_Con tarjeta según condiciones del banco_ 💳";
+    if (modo !== "mayorista") {
+      txt += "💚 *Precio especial pagando por transferencia*\n_Consultanos tu descuento por pago anticipado_\n_Con tarjeta según condiciones del banco_ 💳";
+    }
     window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank");
   };
   const [material, setMaterial] = useState("Todos");
@@ -1089,16 +1091,18 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
     if(descPct>0) t+=`\n🏷 Descuento ${descPct}%: -${fmt(montoDesc)}`;
     if(envioNum>0) t+=`\n🚚 Envío: ${fmt(envioNum)}`;
     t+=`\n\n*TOTAL: ${fmt(totalFinal)}*`;
-    if(mostrarAnticipo) t+=`\n\n_Anticipo 80%: ${fmt(anticipo80)}_\n_Saldo: ${fmt(saldo20)}_`;
+    if(mostrarAnticipo && modo!=="mayorista") t+=`\n\n_Anticipo 80%: ${fmt(anticipo80)}_\n_Saldo: ${fmt(saldo20)}_`;
     t+="\n\n";
-    if(descPct>0){
-      t+=`💚 *Precio incluye ${descPct}% OFF por pago anticipado*\n`;
-      t+=`_Válido abonando por transferencia antes de la entrega_\n`;
-    } else {
-      t+=`💚 *Precio especial pagando por transferencia*\n`;
-      t+=`_Consultanos tu descuento por pago anticipado_\n`;
+    if(modo!=="mayorista"){
+      if(descPct>0){
+        t+=`💚 *Precio incluye ${descPct}% OFF por pago anticipado*\n`;
+        t+=`_Válido abonando por transferencia antes de la entrega_\n`;
+      } else {
+        t+=`💚 *Precio especial pagando por transferencia*\n`;
+        t+=`_Consultanos tu descuento por pago anticipado_\n`;
+      }
+      t+=`_Con tarjeta según condiciones de financiación del banco_ 💳`;
     }
-    t+=`_Con tarjeta según condiciones de financiación del banco_ 💳`;
     return t;
   };
 
@@ -1108,7 +1112,7 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
     items:presupuesto.map(i=>({articulo:i.articulo,medidas:i.medidas,material:i.material,
       cantidad:i.cantidad,precio:i.precio,total:i.precio*i.cantidad,nota:i.nota,sin_descuento:i.sinDesc||false})),
     subtotal,descuento_pct:descPct,descuento_monto:montoDesc,envio:envioNum,total:totalFinal,
-    anticipo_80:mostrarAnticipo?anticipo80:null,saldo:mostrarAnticipo?saldo20:null
+    anticipo_80:(mostrarAnticipo&&modo!=="mayorista")?anticipo80:null,saldo:(mostrarAnticipo&&modo!=="mayorista")?saldo20:null
   },null,2);
 
   const exportar=()=>{
@@ -1280,11 +1284,11 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
       descPct>0&&e('div',{style:{display:"flex",justifyContent:"space-between",fontSize:13,color:"#e07b39",marginBottom:3}},e('span',null,`Descuento ${descPct}%`),e('span',null,`-${fmt(montoDesc)}`)),
       envioNum>0&&e('div',{style:{display:"flex",justifyContent:"space-between",fontSize:13,color:"#888",marginBottom:3}},e('span',null,"Envío"),e('span',null,fmt(envioNum))),
       e('div',{style:{display:"flex",justifyContent:"space-between",fontSize:17,fontWeight:700,color,borderTop:"1px solid #f0ede8",paddingTop:8,marginTop:4}},e('span',null,"TOTAL"),e('span',null,fmt(totalFinal))),
-      e('label',{style:{display:"flex",alignItems:"center",gap:6,marginTop:8,fontSize:11,color:"#777",cursor:"pointer"}},
+      modo!=="mayorista"&&e('label',{style:{display:"flex",alignItems:"center",gap:6,marginTop:8,fontSize:11,color:"#777",cursor:"pointer"}},
         e('input',{type:"checkbox",checked:mostrarAnticipo,onChange:()=>setMostrarAnticipo(v=>!v)}),
         "Mostrar anticipo 80/20"
       ),
-      mostrarAnticipo&&e('div',{style:{marginTop:4}},
+      modo!=="mayorista"&&mostrarAnticipo&&e('div',{style:{marginTop:4}},
         e('div',{style:{display:"flex",justifyContent:"space-between",fontSize:11,color:"#555",marginTop:2}},e('span',null,"Anticipo 80%"),e('span',null,fmt(anticipo80))),
         e('div',{style:{display:"flex",justifyContent:"space-between",fontSize:11,color:"#888"}},e('span',null,"Saldo"),e('span',null,fmt(saldo20)))
       )
