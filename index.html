@@ -944,7 +944,7 @@ function ModoMinorista({ productos, onVolver, adminMode, buscarInicial="" }) {
 // ─────────────────────────────────────────────
 // PRESUPUESTADOR COMPARTIDO (Mayorista + Clientes)
 // ─────────────────────────────────────────────
-function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, buscarInicial="", presupuestoInicial=null, onPresupuestoInicial=null }) {
+function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, buscarInicial="", presupuestoInicial=null }) {
   const cfg = MODOS[modo];
   const color = cfg.color;
   const descOpciones = modo==="mayorista" ? DESCUENTOS_MAY : [0,5,10,15,20];
@@ -952,14 +952,6 @@ function Presupuestador({ modo, productos, descFijo=null, onVolver, adminMode, b
 
   const b = presupuestoInicial ? {} : (loadLS(storageKey) || {});
   const [vista, setVista] = useState(()=> presupuestoInicial?.items?.length ? "presupuesto" : "catalogo");
-  React.useEffect(()=>{
-    // Clear the recovered presupuesto after a short delay to allow render
-    if (presupuestoInicial && onPresupuestoInicial) {
-      const t = setTimeout(()=>onPresupuestoInicial(), 500);
-      return ()=>clearTimeout(t);
-    }
-  // eslint-disable-next-line
-  },[]);
   const [buscar, setBuscar] = useState(buscarInicial||"");
   const [vistaGrilla, setVistaGrilla] = useState(true);
   const [expandidoKey, setExpandidoKey] = useState(null);
@@ -2000,9 +1992,9 @@ function App() {
   if(pantalla==="minorista")
     return e(ModoMinorista,{productos:productosMin,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode,buscarInicial:buscarUrl});
   if(pantalla==="mayorista")
-    return e(Presupuestador,{key:presupuestoRecuperado?._ts||"default",modo:"mayorista",productos:productosMay,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode,buscarInicial:buscarUrl,presupuestoInicial:presupuestoRecuperado,onPresupuestoInicial:()=>setPresupuestoRecuperado(null)});
+    return e(Presupuestador,{key:presupuestoRecuperado?._ts||"default",modo:"mayorista",productos:productosMay,onVolver:linkDirecto?null:()=>{setPresupuestoRecuperado(null);setPantalla("selector");},adminMode,buscarInicial:buscarUrl,presupuestoInicial:presupuestoRecuperado});
   if(pantalla==="clientes")
-    return e(Presupuestador,{key:presupuestoRecuperado?._ts||"default",modo:"clientes",productos:productosMin,descFijo:descCliente,onVolver:linkDirecto?null:()=>setPantalla("selector"),adminMode,buscarInicial:buscarUrl,presupuestoInicial:presupuestoRecuperado,onPresupuestoInicial:()=>setPresupuestoRecuperado(null)});
+    return e(Presupuestador,{key:presupuestoRecuperado?._ts||"default",modo:"clientes",productos:productosMin,descFijo:descCliente,onVolver:linkDirecto?null:()=>{setPresupuestoRecuperado(null);setPantalla("selector");},adminMode,buscarInicial:buscarUrl,presupuestoInicial:presupuestoRecuperado});
   return null;
 }
 
